@@ -2,44 +2,102 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function isUserInRole(role) {
-      // Safely access role, return false if user doc or role doesn't exist.
-      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
-      return request.auth != null &&
-             userDoc != null &&
-             'role' in userDoc.data &&
-             userDoc.data.role == role;
+    // --- Helper Functions ---
+    // Checks if the user is authenticated.
+    function isAuthenticated() {
+      return request.auth != null;
     }
 
-    // Users can only read/write their own profile
+    // Safely retrieves a user's role data from the /users collection.
+    function getUserRole(uid) {
+      let userDoc = get(/databases/$(database)/documents/users/$(uid));
+      if (userDoc != null && 'role' in userDoc.data) {
+        return userDoc.data.role;
+      }
+      return null;
+    }
+
+    // Checks if the authenticated user has a specific role.
+    function isRole(role) {
+      if (!isAuthenticated()) {
+        return false;
+      }
+      return getUserRole(request.auth.uid) == role;
+    }
+
+    function isAdmin() {
+      return isRole('Admin');
+    }
+    
+    function isManager() {
+      return isRole('Manager');
+    }
+    
+    // -- Collection Rules --
+
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-      // Allow admins to read any user profile.
-      allow list, get: if request.auth != null && isUserInRole('Admin');
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+      allow list, get: if isAdmin();
     }
 
-    // Only Admins can manage departments
     match /departments/{departmentId} {
-      allow read, write: if request.auth != null && isUserInRole('Admin');
+      allow read, write: if isAdmin();
     }
 
-    // Admins can manage all employees.
-    // Managers can read all employees.
+    // --- Employee Collection Rules ---
     match /employees/{employeeId} {
-      allow read: if request.auth != null && (isUserInRole('Admin') || isUserInRole('Manager'));
-      allow write: if request.auth != null && isUserInRole('Admin');
+
+      // Data validation function for creating and updating employees.
+      function isDataValid() {
+          let data = request.resource.data;
+          let hasRequiredFields = data.keys().hasAll(['fullName', 'email', 'role', 'departmentId', 'monthlyBaseSalary', 'status', 'dateOfJoining', 'phone']);
+          
+          return hasRequiredFields
+              && data.fullName is string && data.fullName.size() > 0
+              && data.email is string && data.email.matches('.+@.+\\..+')
+              && data.role is string && data.role in ['Admin', 'Manager', 'Employee']
+              && data.departmentId is string
+              && data.monthlyBaseSalary is number && data.monthlyBaseSalary >= 0
+              && data.status is string && data.status in ['Active', 'Inactive']
+              && data.dateOfJoining is string && data.dateOfJoining.matches('^\\d{4}-\\d{2}-\\d{2}$')
+              && data.phone is string;
+      }
+      
+      /*
+       * CREATE: Only an authenticated Admin can create a new employee document.
+       * The new data is validated to ensure correctness.
+       */
+      allow create: if isAdmin() && isDataValid();
+
+      /*
+       * READ: Admins and Managers can read any employee's data.
+       * NOTE: A specific employee can't read their own data with this rule
+       * because there is no 'userId' field on the employee document to match
+       * against the authenticated user's UID. This would be a recommended schema update.
+       */
+      allow read: if isAdmin() || isManager();
+
+      /*
+       * UPDATE: Only Admins can update an employee document.
+       * The updated data is validated.
+       * NOTE: Manager updates for their team members would require a schema change
+       * to link managers to teams and employees to users.
+       */
+      allow update: if isAdmin() && isDataValid();
+
+      /*
+       * DELETE: Only Admins can delete employee documents.
+       */
+      allow delete: if isAdmin();
     }
 
-    // Advances can be read by admins/managers.
-    // Advances can be written by admins.
     match /advances/{advanceId} {
-      allow read: if request.auth != null && (isUserInRole('Admin') || isUserInRole('Manager'));
-      allow write: if request.auth != null && isUserInRole('Admin');
+      allow read: if isAdmin() || isManager();
+      allow write: if isAdmin();
     }
 
-    // Payrolls can only be managed by Admins.
     match /payrolls/{payrollId} {
-        allow read, write: if request.auth != null && isUserInRole('Admin');
+        allow read, write: if isAdmin();
     }
   }
 }
