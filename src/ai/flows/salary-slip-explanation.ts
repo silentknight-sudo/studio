@@ -25,7 +25,7 @@ const SalarySlipInputSchema = z.object({
   advanceDeduction: z.number().describe('The amount deducted as advance salary repayment.'),
   netPayableSalary: z.number().describe('The final payable salary after deductions.'),
   companyName: z.string().describe('The name of the company.'),
-  companyLogoUrl: z.string().url().describe('URL of the company logo.'),
+  companyLogoUrl: z.string().describe('URL of the company logo.'),
 });
 export type SalarySlipInput = z.infer<typeof SalarySlipInputSchema>;
 
