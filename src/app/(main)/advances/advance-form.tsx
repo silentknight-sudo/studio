@@ -27,11 +27,6 @@ import React from 'react';
 import { useCollection } from '@/firebase';
 import { CollectionReference, collection } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { CalendarIcon } from 'lucide-react';
-import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
 
 const advanceSchema = z.object({
   employeeId: z.string().min(1, 'Employee is required'),
@@ -127,34 +122,7 @@ export function AdvanceForm({ advance, onSave, isOpen, onOpenChange }: AdvanceFo
           </div>
           <div>
             <Label htmlFor="issueDate">Issue Date</Label>
-            <Controller
-              name="issueDate"
-              control={control}
-              render={({ field }) => (
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant={'outline'}
-                      className={cn(
-                        'w-full justify-start text-left font-normal',
-                        !field.value && 'text-muted-foreground'
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {field.value ? format(new Date(field.value), 'PPP') : <span>Pick a date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={field.value ? new Date(field.value) : undefined}
-                      onSelect={(date) => field.onChange(date?.toISOString().split('T')[0])}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              )}
-            />
+            <Input id="issueDate" type="text" placeholder="YYYY-MM-DD" {...register('issueDate')} />
             {errors.issueDate && <p className="text-sm text-destructive">{errors.issueDate.message}</p>}
           </div>
           <div>
