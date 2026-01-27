@@ -4,7 +4,11 @@ service cloud.firestore {
 
     function isUserInRole(role) {
       // Safely access role, return false if user doc or role doesn't exist.
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
+      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      return request.auth != null &&
+             userDoc != null &&
+             'role' in userDoc.data &&
+             userDoc.data.role == role;
     }
 
     // Users can only read/write their own profile
@@ -23,7 +27,7 @@ service cloud.firestore {
     // Managers can read all employees.
     match /employees/{employeeId} {
       allow read: if request.auth != null && (isUserInRole('Admin') || isUserInRole('Manager'));
-      allow write: if request.auth != null && isUserInRole('Admin');
+      allow create, update, delete: if request.auth != null && isUserInRole('Admin');
     }
 
     // Advances can be read by admins/managers.
