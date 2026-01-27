@@ -39,7 +39,6 @@ export default function EmployeesPage() {
           const docData = {
             ...cleanData,
             status: 'Active',
-            dateOfJoining: new Date().toISOString().split('T')[0],
           } as Omit<Employee, 'id'>;
           await addOrUpdateDoc(firestore, 'employees', docData);
         }

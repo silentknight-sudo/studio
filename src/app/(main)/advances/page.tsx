@@ -29,19 +29,14 @@ export default function AdvancesPage() {
     const [isFormOpen, setIsFormOpen] = React.useState(false);
 
     const handleSaveAdvance = async (data: AdvanceFormData) => {
-        const docData = {
-            ...data,
-            issueDate: new Date().toISOString().split('T')[0],
-        };
-
         if (editingAdvance) {
             await addOrUpdateDoc(
                 firestore, 
                 `advances/${editingAdvance.id}`, 
-                {...docData, remainingBalance: data.amount - (editingAdvance.amount - editingAdvance.remainingBalance)}
+                {...data, remainingBalance: data.amount - (editingAdvance.amount - editingAdvance.remainingBalance)}
             );
         } else {
-            await addOrUpdateDoc(firestore, 'advances', { ...docData, remainingBalance: data.amount });
+            await addOrUpdateDoc(firestore, 'advances', { ...data, remainingBalance: data.amount });
         }
     }
 

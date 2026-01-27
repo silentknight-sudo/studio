@@ -26,6 +26,11 @@ import type { Employee, Department } from '@/lib/types';
 import React from 'react';
 import { useCollection, useFirestore } from '@/firebase';
 import { collection, CollectionReference } from 'firebase/firestore';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { CalendarIcon } from 'lucide-react';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 
 const employeeSchema = z.object({
@@ -36,6 +41,7 @@ const employeeSchema = z.object({
   departmentId: z.string().min(1, 'Department is required'),
   teamId: z.string().optional(),
   monthlyBaseSalary: z.coerce.number().min(0, 'Salary must be a positive number'),
+  dateOfJoining: z.string().min(1, 'Date of joining is required'),
 });
 
 export type EmployeeFormData = z.infer<typeof employeeSchema>;
@@ -73,6 +79,7 @@ export function EmployeeForm({ employee, onSave, isOpen, onOpenChange }: Employe
             departmentId: employee?.departmentId || '',
             teamId: employee?.teamId || undefined,
             monthlyBaseSalary: employee?.monthlyBaseSalary || 0,
+            dateOfJoining: employee?.dateOfJoining || new Date().toISOString().split('T')[0],
         });
     }
   }, [isOpen, employee, reset]);
@@ -149,6 +156,38 @@ export function EmployeeForm({ employee, onSave, isOpen, onOpenChange }: Employe
               )}
             />
             {errors.departmentId && <p className="text-sm text-destructive">{errors.departmentId.message}</p>}
+          </div>
+          <div>
+            <Label htmlFor="dateOfJoining">Date of Joining</Label>
+            <Controller
+              name="dateOfJoining"
+              control={control}
+              render={({ field }) => (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={'outline'}
+                      className={cn(
+                        'w-full justify-start text-left font-normal',
+                        !field.value && 'text-muted-foreground'
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {field.value ? format(new Date(field.value), 'PPP') : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={field.value ? new Date(field.value) : undefined}
+                      onSelect={(date) => field.onChange(date?.toISOString().split('T')[0])}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              )}
+            />
+            {errors.dateOfJoining && <p className="text-sm text-destructive">{errors.dateOfJoining.message}</p>}
           </div>
           <div>
             <Label htmlFor="monthlyBaseSalary">Monthly Salary</Label>
