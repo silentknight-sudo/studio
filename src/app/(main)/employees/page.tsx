@@ -30,11 +30,14 @@ export default function EmployeesPage() {
     const [isFormOpen, setIsFormOpen] = React.useState(false);
 
     const handleSaveEmployee = async (data: EmployeeFormData) => {
+        // Sanitize data to remove undefined values, which Firestore doesn't support.
+        const cleanData = JSON.parse(JSON.stringify(data));
+
         if (editingEmployee) {
-          await addOrUpdateDoc(firestore, `employees/${editingEmployee.id}`, data);
+          await addOrUpdateDoc(firestore, `employees/${editingEmployee.id}`, cleanData);
         } else {
           const docData = {
-            ...data,
+            ...cleanData,
             status: 'Active',
             dateOfJoining: new Date().toISOString().split('T')[0],
           } as Omit<Employee, 'id'>;
