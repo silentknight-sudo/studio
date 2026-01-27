@@ -6,11 +6,11 @@ import { Badge } from '@/components/ui/badge';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
 import { DollarSign, Users, Activity, CreditCard } from 'lucide-react';
-import type { Employee, Payroll, Department, Advance } from '@/lib/types';
+import type { Employee, Payroll, Department, Advance, UserProfile } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { useCollection, useFirestore, useUser } from '@/firebase';
-import { collection, CollectionReference } from 'firebase/firestore';
+import { useCollection, useFirestore, useUser, useDoc } from '@/firebase';
+import { collection, CollectionReference, doc } from 'firebase/firestore';
 
 const AdminDashboard = () => {
   const firestore = useFirestore();
@@ -65,7 +65,7 @@ const AdminDashboard = () => {
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalPayroll.toLocaleString()}</div>
+            <div className="text-2xl font-bold">₹{totalPayroll.toLocaleString('en-IN')}</div>
             <p className="text-xs text-muted-foreground">For {new Date().toLocaleString('default', { month: 'long' })}</p>
           </CardContent>
         </Card>
@@ -75,7 +75,7 @@ const AdminDashboard = () => {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${outstandingAdvances.toLocaleString()}</div>
+            <div className="text-2xl font-bold">₹{outstandingAdvances.toLocaleString('en-IN')}</div>
             <p className="text-xs text-muted-foreground">Across all employees</p>
           </CardContent>
         </Card>
@@ -110,7 +110,7 @@ const AdminDashboard = () => {
                         </div>
                       </TableCell>
                       <TableCell className="hidden sm:table-cell">{employee?.role}</TableCell>
-                      <TableCell>${p.netPayableSalary.toLocaleString()}</TableCell>
+                      <TableCell>₹{p.netPayableSalary.toLocaleString('en-IN')}</TableCell>
                       <TableCell>{p.month}</TableCell>
                       <TableCell className='text-right'><Badge>Paid</Badge></TableCell>
                     </TableRow>
@@ -230,11 +230,19 @@ const EmployeeDashboard = () => {
 }
 
 export default function DashboardPage() {
-  // In a real app, this would come from the user's custom claims or a profile doc.
-  // For now, we'll assume anyone can be an admin.
-  const USER_ROLE: 'admin' | 'manager' | 'employee' = 'admin';
+  const { user, loading: userLoading } = useUser();
+  const firestore = useFirestore();
+  const { data: userProfile, loading: profileLoading } = useDoc<UserProfile>(
+    user ? doc(firestore, 'users', user.uid) : null
+  );
+  
+  const USER_ROLE = userProfile?.role?.toLowerCase() as 'admin' | 'manager' | 'employee' | undefined;
 
   const renderDashboard = () => {
+    if (userLoading || profileLoading) {
+        return <div className="text-center">Loading dashboard...</div>;
+    }
+
     switch(USER_ROLE) {
       case 'admin':
         return <AdminDashboard />;
@@ -243,7 +251,7 @@ export default function DashboardPage() {
       case 'employee':
         return <EmployeeDashboard />;
       default:
-        return <div>Invalid Role</div>;
+        return <div>Loading user role... If this persists, you may not have a role assigned.</div>;
     }
   }
 

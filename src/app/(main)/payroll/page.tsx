@@ -41,7 +41,7 @@ export default function PayrollPage() {
                                             <div className="text-sm text-muted-foreground">{employee.email}</div>
                                         </TableCell>
                                         <TableCell>{employee.role}</TableCell>
-                                        <TableCell>${employee.monthlyBaseSalary.toLocaleString()}</TableCell>
+                                        <TableCell>₹{employee.monthlyBaseSalary.toLocaleString('en-IN')}</TableCell>
                                         <TableCell>
                                             <Badge variant={employee.status === 'Active' ? 'default' : 'secondary'}>
                                                 {employee.status}

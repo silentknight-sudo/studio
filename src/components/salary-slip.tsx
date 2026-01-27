@@ -71,29 +71,29 @@ export function SalarySlipDisplay({ slip }: SalarySlipDisplayProps) {
               <h3 className="mb-2 font-semibold">Earnings</h3>
               <div className="flex justify-between border-b py-2">
                 <span>Gross Salary</span>
-                <span>${grossSalary.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                <span>₹{grossSalary.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
               </div>
                <div className="flex justify-between font-bold pt-2">
                 <span>Total Earnings</span>
-                <span>${grossSalary.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                <span>₹{grossSalary.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
               </div>
             </div>
             <div>
               <h3 className="mb-2 font-semibold">Deductions</h3>
               <div className="flex justify-between border-b py-2">
                 <span>Advance Deduction</span>
-                <span>${advanceDeduction.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                <span>₹{advanceDeduction.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
               </div>
               <div className="flex justify-between font-bold pt-2">
                 <span>Total Deductions</span>
-                <span>${advanceDeduction.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                <span>₹{advanceDeduction.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
               </div>
             </div>
           </div>
           
           <div className="mt-6 rounded-lg bg-primary/5 p-4 text-center">
             <p className="text-sm font-medium text-muted-foreground">NET PAYABLE SALARY</p>
-            <p className="font-headline text-3xl font-bold text-primary">${netPayableSalary.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+            <p className="font-headline text-3xl font-bold text-primary">₹{netPayableSalary.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
           </div>
 
           {explanation && (
