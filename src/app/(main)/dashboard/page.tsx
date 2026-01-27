@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
-import { HandCoins, Users, Activity, CreditCard } from 'lucide-react';
+import { Banknote, Users, Activity, CreditCard } from 'lucide-react';
 import type { Employee, Payroll, Department, Advance, UserProfile } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -65,17 +65,17 @@ const AdminDashboard = () => {
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalPayroll.toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}</div>
+            <div className="text-2xl font-bold">{totalPayroll.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})} INR</div>
             <p className="text-xs text-muted-foreground">For {new Date().toLocaleString('default', { month: 'long' })}</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Outstanding Advances</CardTitle>
-            <HandCoins className="h-4 w-4 text-muted-foreground" />
+            <Banknote className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{outstandingAdvances.toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}</div>
+            <div className="text-2xl font-bold">{outstandingAdvances.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})} INR</div>
             <p className="text-xs text-muted-foreground">Across all employees</p>
           </CardContent>
         </Card>
@@ -110,7 +110,7 @@ const AdminDashboard = () => {
                         </div>
                       </TableCell>
                       <TableCell className="hidden sm:table-cell">{employee?.role}</TableCell>
-                      <TableCell>{p.netPayableSalary.toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}</TableCell>
+                      <TableCell>{p.netPayableSalary.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})} INR</TableCell>
                       <TableCell>{p.month}</TableCell>
                       <TableCell className='text-right'><Badge>Paid</Badge></TableCell>
                     </TableRow>
@@ -236,13 +236,13 @@ export default function DashboardPage() {
     user ? doc(firestore, 'users', user.uid) : null
   );
   
+  if (userLoading || profileLoading) {
+    return <div className="text-center">Loading dashboard...</div>;
+  }
+  
   const USER_ROLE = userProfile?.role?.toLowerCase() as 'admin' | 'manager' | 'employee' | undefined;
 
   const renderDashboard = () => {
-    if (userLoading || profileLoading) {
-        return <div className="text-center">Loading dashboard...</div>;
-    }
-
     switch(USER_ROLE) {
       case 'admin':
         return <AdminDashboard />;
