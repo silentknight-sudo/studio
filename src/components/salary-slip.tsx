@@ -14,7 +14,7 @@ export function SalarySlipDisplay({ slip }: SalarySlipDisplayProps) {
   return (
     <div className="bg-card text-card-foreground" id="salary-slip-printable">
         <style type="text/css">
-        {\`
+        {`
         @media print {
             body * {
                 visibility: hidden;
@@ -33,7 +33,7 @@ export function SalarySlipDisplay({ slip }: SalarySlipDisplayProps) {
                 margin: 0.5in;
             }
         }
-        \`}
+        `}
         </style>
       <Card className="w-full border-2 border-primary shadow-2xl">
         <CardHeader className="bg-primary/5">
