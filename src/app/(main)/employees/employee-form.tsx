@@ -31,6 +31,7 @@ import { collection, CollectionReference } from 'firebase/firestore';
 const employeeSchema = z.object({
   fullName: z.string().min(1, 'Full name is required'),
   email: z.string().email('Invalid email address'),
+  phone: z.string().min(1, 'Phone number is required'),
   role: z.enum(['Admin', 'Manager', 'Employee']),
   departmentId: z.string().min(1, 'Department is required'),
   teamId: z.string().optional(),
@@ -67,6 +68,7 @@ export function EmployeeForm({ employee, onSave, isOpen, onOpenChange }: Employe
         reset({
             fullName: employee?.fullName || '',
             email: employee?.email || '',
+            phone: employee?.phone || '',
             role: employee?.role || 'Employee',
             departmentId: employee?.departmentId || '',
             teamId: employee?.teamId || undefined,
@@ -100,6 +102,11 @@ export function EmployeeForm({ employee, onSave, isOpen, onOpenChange }: Employe
             <Label htmlFor="email">Email</Label>
             <Input id="email" type="email" {...register('email')} />
             {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
+          </div>
+          <div>
+            <Label htmlFor="phone">Phone</Label>
+            <Input id="phone" type="tel" {...register('phone')} />
+            {errors.phone && <p className="text-sm text-destructive">{errors.phone.message}</p>}
           </div>
            <div>
             <Label htmlFor="role">Role</Label>

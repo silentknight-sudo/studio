@@ -27,7 +27,7 @@ service cloud.firestore {
     // Managers can read all employees.
     match /employees/{employeeId} {
       allow read: if request.auth != null && (isUserInRole('Admin') || isUserInRole('Manager'));
-      allow create, update, delete: if request.auth != null && isUserInRole('Admin');
+      allow write: if request.auth != null && isUserInRole('Admin');
     }
 
     // Advances can be read by admins/managers.

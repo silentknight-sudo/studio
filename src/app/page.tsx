@@ -11,7 +11,7 @@ import { z } from 'zod';
 import { useAuth } from '@/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useUser } from '@/firebase';
 
@@ -36,6 +36,13 @@ export default function LoginPage() {
   const { user, loading } = useUser();
   const [authError, setAuthError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (user) {
+      router.push('/dashboard');
+    }
+  }, [user, router]);
+
+
   const onSubmit = async (data: LoginFormData) => {
     setAuthError(null);
     try {
@@ -46,13 +53,8 @@ export default function LoginPage() {
     }
   };
 
-  if (loading) {
+  if (loading || user) {
     return <div className="flex h-screen items-center justify-center">Loading...</div>;
-  }
-
-  if (user) {
-    router.push('/dashboard');
-    return null;
   }
 
   return (

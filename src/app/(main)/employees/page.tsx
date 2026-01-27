@@ -30,15 +30,14 @@ export default function EmployeesPage() {
     const [isFormOpen, setIsFormOpen] = React.useState(false);
 
     const handleSaveEmployee = async (data: EmployeeFormData) => {
-        const docData = {
-          ...data,
-          status: 'Active',
-          dateOfJoining: new Date().toISOString().split('T')[0],
-        } as Omit<Employee, 'id'>;
-    
         if (editingEmployee) {
           await addOrUpdateDoc(firestore, `employees/${editingEmployee.id}`, data);
         } else {
+          const docData = {
+            ...data,
+            status: 'Active',
+            dateOfJoining: new Date().toISOString().split('T')[0],
+          } as Omit<Employee, 'id'>;
           await addOrUpdateDoc(firestore, 'employees', docData);
         }
       };
