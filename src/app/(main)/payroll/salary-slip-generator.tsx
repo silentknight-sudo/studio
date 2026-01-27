@@ -14,11 +14,13 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
-import type { Employee, SalarySlip } from '@/lib/types';
+import type { Employee, SalarySlip, Department, Team } from '@/lib/types';
 import { generateSalarySlipAction } from '@/app/actions';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { SalarySlipDisplay } from '@/components/salary-slip';
+import { useFirestore, useDoc } from '@/firebase';
+import { doc } from 'firebase/firestore';
 
 export function SalarySlipGenerator({ employee }: { employee: Employee }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -27,14 +29,18 @@ export function SalarySlipGenerator({ employee }: { employee: Employee }) {
   const [slip, setSlip] = useState<SalarySlip | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const firestore = useFirestore();
+  const { data: department } = useDoc<Department>(doc(firestore, 'departments', employee.departmentId));
+  const { data: team } = useDoc<Team>(employee.teamId ? doc(firestore, 'teams', employee.teamId) : null);
+
   const handleGenerate = () => {
     startTransition(async () => {
       setError(null);
       setSlip(null);
       const result = await generateSalarySlipAction({
-        employeeId: employee.id,
+        employeeId: employee.id!,
         advanceDeduction: advanceDeduction,
-      });
+      }, employee, department, team);
 
       if (result.success && result.data) {
         setSlip(result.data);

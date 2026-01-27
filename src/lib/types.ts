@@ -1,7 +1,7 @@
 export type Role = 'Admin' | 'Manager' | 'Employee';
 
 export type Employee = {
-  id: string;
+  id?: string;
   fullName: string;
   email: string;
   phone: string;
@@ -15,19 +15,19 @@ export type Employee = {
 };
 
 export type Department = {
-  id: string;
+  id?: string;
   name: string;
 };
 
 export type Team = {
-  id: string;
+  id?: string;
   name: string;
   departmentId: string;
   managerId?: string;
 };
 
 export type Attendance = {
-  id: string;
+  id?: string;
   employeeId: string;
   checkIn: Date;
   checkOut?: Date;
@@ -35,7 +35,7 @@ export type Attendance = {
 };
 
 export type Payroll = {
-  id: string;
+  id?: string;
   employeeId: string;
   month: string; // e.g., "June 2024"
   grossSalary: number;
@@ -44,7 +44,7 @@ export type Payroll = {
 };
 
 export type Advance = {
-    id: string;
+    id?: string;
     employeeId: string;
     amount: number;
     issueDate: string; // YYYY-MM-DD
@@ -68,4 +68,10 @@ export type SalarySlip = {
     advanceDeduction: number;
     netPayableSalary: number;
     explanation: string;
+}
+
+export interface UserProfile {
+    id?: string;
+    email: string;
+    role: Role;
 }

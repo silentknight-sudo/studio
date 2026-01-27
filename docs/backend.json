@@ -1,0 +1,87 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Represents a user's profile information.",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "The user's email address."
+        },
+        "role": {
+          "type": "string",
+          "enum": ["Admin", "Manager", "Employee"],
+          "description": "The user's role in the system."
+        }
+      },
+      "required": ["email", "role"]
+    },
+    "Department": {
+      "title": "Department",
+      "description": "Represents a department in the company.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the department."
+        }
+      },
+      "required": ["name"]
+    },
+    "Employee": {
+      "title": "Employee",
+      "description": "Represents an employee in the company.",
+      "type": "object",
+      "properties": {
+        "fullName": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "phone": { "type": "string" },
+        "role": { "type": "string", "enum": ["Admin", "Manager", "Employee"] },
+        "departmentId": { "type": "string" },
+        "teamId": { "type": "string" },
+        "dateOfJoining": { "type": "string", "format": "date" },
+        "monthlyBaseSalary": { "type": "number" },
+        "status": { "type": "string", "enum": ["Active", "Inactive"] },
+        "profilePhotoUrl": { "type": "string", "format": "uri" }
+      },
+      "required": ["fullName", "email", "role", "departmentId", "dateOfJoining", "monthlyBaseSalary", "status"]
+    },
+    "Advance": {
+        "title": "Salary Advance",
+        "description": "Represents a salary advance given to an employee.",
+        "type": "object",
+        "properties": {
+            "employeeId": { "type": "string" },
+            "amount": { "type": "number" },
+            "issueDate": { "type": "string", "format": "date" },
+            "repaymentType": { "type": "string", "enum": ["Single-month", "Multi-month"] },
+            "installments": { "type": "number" },
+            "remainingBalance": { "type": "number" }
+        },
+        "required": ["employeeId", "amount", "issueDate", "repaymentType", "installments", "remainingBalance"]
+    }
+  },
+  "auth": {
+    "providers": ["email"]
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Stores public profile information for each user."
+    },
+    "/departments/{departmentId}": {
+      "schema": { "$ref": "#/entities/Department" },
+      "description": "Collection of all departments."
+    },
+    "/employees/{employeeId}": {
+      "schema": { "$ref": "#/entities/Employee" },
+      "description": "Collection of all employees."
+    },
+    "/advances/{advanceId}": {
+        "schema": { "$ref": "#/entities/Advance" },
+        "description": "Collection of all salary advances."
+    }
+  }
+}

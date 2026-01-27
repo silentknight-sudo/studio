@@ -13,34 +13,38 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { employees as mockEmployees, departments } from "@/lib/mock-data"
-import type { Employee } from '@/lib/types';
-import { EmployeeForm } from './employee-form';
+import type { Employee, Department } from '@/lib/types';
+import { EmployeeForm, EmployeeFormData } from './employee-form';
 import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialog';
+import { useFirestore, useCollection } from '@/firebase';
+import { collection } from 'firebase/firestore';
+import { addOrUpdateDoc, deleteDocument } from '@/lib/firebase-utils';
 
 
 export default function EmployeesPage() {
-    const [employees, setEmployees] = React.useState<Employee[]>(mockEmployees);
+    const firestore = useFirestore();
+    const { data: employees, loading: loadingEmployees } = useCollection<Employee>(collection(firestore, 'employees'));
+    const { data: departments, loading: loadingDepartments } = useCollection<Department>(collection(firestore, 'departments'));
+
     const [editingEmployee, setEditingEmployee] = React.useState<Employee | undefined>(undefined);
     const [isFormOpen, setIsFormOpen] = React.useState(false);
 
-    const handleSaveEmployee = (data: any) => {
+    const handleSaveEmployee = async (data: EmployeeFormData) => {
+        const docData = {
+          ...data,
+          status: 'Active',
+          dateOfJoining: new Date().toISOString().split('T')[0],
+        } as Omit<Employee, 'id'>;
+    
         if (editingEmployee) {
-            setEmployees(employees.map(e => e.id === editingEmployee.id ? { ...e, ...data } : e));
+          await addOrUpdateDoc(firestore, `employees/${editingEmployee.id}`, data);
         } else {
-            const newEmployee: Employee = {
-                id: `E${String(employees.length + 1).padStart(3, '0')}`,
-                dateOfJoining: new Date().toISOString().split('T')[0],
-                status: 'Active',
-                phone: '', // default
-                ...data
-            };
-            setEmployees(prev => [...prev, newEmployee]);
+          await addOrUpdateDoc(firestore, 'employees', docData);
         }
-    }
+      };
 
-    const handleDeleteEmployee = (employeeId: string) => {
-        setEmployees(employees.filter(e => e.id !== employeeId));
+    const handleDeleteEmployee = async (employeeId: string) => {
+        await deleteDocument(firestore, `employees/${employeeId}`);
     }
 
     const handleEditClick = (employee: Employee) => {
@@ -51,6 +55,10 @@ export default function EmployeesPage() {
     const handleNewClick = () => {
         setEditingEmployee(undefined);
         setIsFormOpen(true);
+    }
+
+    const getDepartmentName = (departmentId: string) => {
+        return departments?.find(d => d.id === departmentId)?.name || 'N/A';
     }
 
     return (
@@ -85,9 +93,10 @@ export default function EmployeesPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {employees.map(employee => {
-                                const department = departments.find(d => d.id === employee.departmentId);
-                                return (
+                            {loadingEmployees || loadingDepartments ? (
+                                <TableRow><TableCell colSpan={5} className="text-center">Loading...</TableCell></TableRow>
+                            ) : (
+                                employees?.map(employee => (
                                 <TableRow key={employee.id}>
                                     <TableCell>
                                         <div className="font-medium">{employee.fullName}</div>
@@ -96,7 +105,7 @@ export default function EmployeesPage() {
                                         </div>
                                     </TableCell>
                                     <TableCell className="hidden sm:table-cell">{employee.role}</TableCell>
-                                    <TableCell className="hidden md:table-cell">{department?.name}</TableCell>
+                                    <TableCell className="hidden md:table-cell">{getDepartmentName(employee.departmentId)}</TableCell>
                                     <TableCell>
                                         <Badge variant={employee.status === 'Active' ? 'default' : 'secondary'}>
                                             {employee.status}
@@ -118,7 +127,7 @@ export default function EmployeesPage() {
                                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                 <DropdownMenuItem onClick={() => handleEditClick(employee)}>Edit</DropdownMenuItem>
                                                 <DeleteConfirmationDialog
-                                                    onConfirm={() => handleDeleteEmployee(employee.id)}
+                                                    onConfirm={() => handleDeleteEmployee(employee.id!)}
                                                     itemName={employee.fullName}
                                                     itemType="employee"
                                                 >
@@ -128,8 +137,8 @@ export default function EmployeesPage() {
                                         </DropdownMenu>
                                     </TableCell>
                                 </TableRow>
-                                )
-                            })}
+                                ))
+                            )}
                         </TableBody>
                     </Table>
                 </CardContent>

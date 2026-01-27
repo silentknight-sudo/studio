@@ -12,30 +12,31 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { departments as mockDepartments, employees } from "@/lib/mock-data"
-import type { Department } from '@/lib/types';
-import { DepartmentForm } from './department-form';
+import type { Department, Employee } from '@/lib/types';
+import { DepartmentForm, DepartmentFormData } from './department-form';
 import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialog';
+import { useFirestore, useCollection } from '@/firebase';
+import { collection } from 'firebase/firestore';
+import { addOrUpdateDoc, deleteDocument } from '@/lib/firebase-utils';
 
 export default function DepartmentsPage() {
-    const [departments, setDepartments] = React.useState<Department[]>(mockDepartments);
+    const firestore = useFirestore();
+    const { data: departments, loading: loadingDepartments } = useCollection<Department>(collection(firestore, 'departments'));
+    const { data: employees, loading: loadingEmployees } = useCollection<Employee>(collection(firestore, 'employees'));
+
     const [editingDepartment, setEditingDepartment] = React.useState<Department | undefined>(undefined);
     const [isFormOpen, setIsFormOpen] = React.useState(false);
 
-    const handleSaveDepartment = (data: { name: string }) => {
+    const handleSaveDepartment = async (data: DepartmentFormData) => {
         if (editingDepartment) {
-            setDepartments(departments.map(d => d.id === editingDepartment.id ? { ...d, ...data } : d));
+            await addOrUpdateDoc(firestore, `departments/${editingDepartment.id}`, data);
         } else {
-            const newDepartment: Department = {
-                id: `D${String(departments.length + 1).padStart(2, '0')}`,
-                name: data.name
-            };
-            setDepartments(prev => [...prev, newDepartment]);
+            await addOrUpdateDoc(firestore, 'departments', data);
         }
     }
 
-    const handleDeleteDepartment = (departmentId: string) => {
-        setDepartments(departments.filter(d => d.id !== departmentId));
+    const handleDeleteDepartment = async (departmentId: string) => {
+        await deleteDocument(firestore, `departments/${departmentId}`);
     }
 
     const handleEditClick = (department: Department) => {
@@ -80,40 +81,46 @@ export default function DepartmentsPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {departments.map(dept => {
-                                const employeeCount = employees.filter(e => e.departmentId === dept.id).length;
-                                return (
-                                    <TableRow key={dept.id}>
-                                        <TableCell className="font-medium">{dept.name}</TableCell>
-                                        <TableCell>{employeeCount}</TableCell>
-                                        <TableCell className="text-right">
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                <Button
-                                                    aria-haspopup="true"
-                                                    size="icon"
-                                                    variant="ghost"
-                                                >
-                                                    <MoreHorizontal className="h-4 w-4" />
-                                                    <span className="sr-only">Toggle menu</span>
-                                                </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                    <DropdownMenuItem onClick={() => handleEditClick(dept)}>Edit</DropdownMenuItem>
-                                                    <DeleteConfirmationDialog
-                                                        onConfirm={() => handleDeleteDepartment(dept.id)}
-                                                        itemName={dept.name}
-                                                        itemType="department"
+                            {loadingDepartments || loadingEmployees ? (
+                                <TableRow>
+                                    <TableCell colSpan={3} className="text-center">Loading...</TableCell>
+                                </TableRow>
+                            ) : (
+                                departments?.map(dept => {
+                                    const employeeCount = employees?.filter(e => e.departmentId === dept.id).length || 0;
+                                    return (
+                                        <TableRow key={dept.id}>
+                                            <TableCell className="font-medium">{dept.name}</TableCell>
+                                            <TableCell>{employeeCount}</TableCell>
+                                            <TableCell className="text-right">
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                    <Button
+                                                        aria-haspopup="true"
+                                                        size="icon"
+                                                        variant="ghost"
                                                     >
-                                                        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>Delete</DropdownMenuItem>
-                                                    </DeleteConfirmationDialog>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </TableCell>
-                                    </TableRow>
-                                )
-                            })}
+                                                        <MoreHorizontal className="h-4 w-4" />
+                                                        <span className="sr-only">Toggle menu</span>
+                                                    </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                        <DropdownMenuItem onClick={() => handleEditClick(dept)}>Edit</DropdownMenuItem>
+                                                        <DeleteConfirmationDialog
+                                                            onConfirm={() => handleDeleteDepartment(dept.id!)}
+                                                            itemName={dept.name}
+                                                            itemType="department"
+                                                        >
+                                                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>Delete</DropdownMenuItem>
+                                                        </DeleteConfirmationDialog>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </TableCell>
+                                        </TableRow>
+                                    )
+                                })
+                            )}
                         </TableBody>
                     </Table>
                 </CardContent>

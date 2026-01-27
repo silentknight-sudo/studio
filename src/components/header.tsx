@@ -25,6 +25,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Fragment } from 'react';
+import { useAuth, useUser } from '@/firebase';
+import { signOut } from 'firebase/auth';
 
 const userAvatar = PlaceHolderImages.find(img => img.id === 'user-avatar');
 
@@ -43,6 +45,12 @@ export function Header() {
     const isMobile = useIsMobile();
     const pathname = usePathname();
     const breadcrumbs = generateBreadcrumbs(pathname);
+    const auth = useAuth();
+    const { user } = useUser();
+
+    const handleLogout = async () => {
+        await signOut(auth);
+    }
 
   return (
     <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm sm:h-16 sm:px-6">
@@ -87,7 +95,15 @@ export function Header() {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="icon" className="overflow-hidden rounded-full">
-            {userAvatar && (
+            {user?.photoURL ? (
+              <Image
+                src={user.photoURL}
+                width={36}
+                height={36}
+                alt="Avatar"
+                className="overflow-hidden rounded-full"
+              />
+            ) : userAvatar && (
               <Image
                 src={userAvatar.imageUrl}
                 width={36}
@@ -100,13 +116,13 @@ export function Header() {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuLabel>My Account</DropdownMenuLabel>
+          <DropdownMenuLabel>{user?.email || "My Account"}</DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem><User className='mr-2' /> Profile</DropdownMenuItem>
           <DropdownMenuItem><Settings className='mr-2'/> Settings</DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem asChild>
-            <Link href="/"><LogOut className='mr-2'/> Logout</Link>
+          <DropdownMenuItem onClick={handleLogout}>
+            <LogOut className='mr-2'/> Logout
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

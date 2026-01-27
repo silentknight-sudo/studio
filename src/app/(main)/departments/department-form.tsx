@@ -22,7 +22,7 @@ const departmentSchema = z.object({
   name: z.string().min(1, 'Department name is required'),
 });
 
-type DepartmentFormData = z.infer<typeof departmentSchema>;
+export type DepartmentFormData = z.infer<typeof departmentSchema>;
 
 interface DepartmentFormProps {
   department?: Department;

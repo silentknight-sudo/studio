@@ -22,9 +22,11 @@ import {
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import type { Employee } from '@/lib/types';
-import { departments, teams } from '@/lib/mock-data';
+import type { Employee, Department } from '@/lib/types';
 import React from 'react';
+import { useCollection, useFirestore } from '@/firebase';
+import { collection, CollectionReference } from 'firebase/firestore';
+
 
 const employeeSchema = z.object({
   fullName: z.string().min(1, 'Full name is required'),
@@ -35,7 +37,7 @@ const employeeSchema = z.object({
   monthlyBaseSalary: z.coerce.number().min(0, 'Salary must be a positive number'),
 });
 
-type EmployeeFormData = z.infer<typeof employeeSchema>;
+export type EmployeeFormData = z.infer<typeof employeeSchema>;
 
 interface EmployeeFormProps {
   employee?: Employee;
@@ -54,6 +56,11 @@ export function EmployeeForm({ employee, onSave, isOpen, onOpenChange }: Employe
   } = useForm<EmployeeFormData>({
     resolver: zodResolver(employeeSchema),
   });
+
+  const firestore = useFirestore();
+  const { data: departments } = useCollection<Department>(
+    collection(firestore, 'departments') as CollectionReference<Department>
+  );
 
   React.useEffect(() => {
     if (isOpen) {
@@ -125,8 +132,8 @@ export function EmployeeForm({ employee, onSave, isOpen, onOpenChange }: Employe
                     <SelectValue placeholder="Select a department" />
                   </SelectTrigger>
                   <SelectContent>
-                    {departments.map((dept) => (
-                      <SelectItem key={dept.id} value={dept.id}>
+                    {departments?.map((dept) => (
+                      <SelectItem key={dept.id} value={dept.id!}>
                         {dept.name}
                       </SelectItem>
                     ))}

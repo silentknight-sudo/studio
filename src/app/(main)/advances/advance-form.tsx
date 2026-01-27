@@ -22,9 +22,11 @@ import {
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import type { Advance } from '@/lib/types';
-import { employees } from '@/lib/mock-data';
+import type { Advance, Employee } from '@/lib/types';
 import React from 'react';
+import { useCollection } from '@/firebase';
+import { CollectionReference, collection } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
 
 const advanceSchema = z.object({
   employeeId: z.string().min(1, 'Employee is required'),
@@ -33,7 +35,7 @@ const advanceSchema = z.object({
   installments: z.coerce.number().min(1).optional(),
 });
 
-type AdvanceFormData = z.infer<typeof advanceSchema>;
+export type AdvanceFormData = z.infer<typeof advanceSchema>;
 
 interface AdvanceFormProps {
   advance?: Advance;
@@ -55,6 +57,10 @@ export function AdvanceForm({ advance, onSave, isOpen, onOpenChange }: AdvanceFo
   });
 
   const repaymentType = watch('repaymentType');
+  const firestore = useFirestore();
+  const { data: employees } = useCollection(
+    collection(firestore, 'employees') as CollectionReference<Employee>
+  );
 
   React.useEffect(() => {
     if (isOpen) {
@@ -96,8 +102,8 @@ export function AdvanceForm({ advance, onSave, isOpen, onOpenChange }: AdvanceFo
                     <SelectValue placeholder="Select an employee" />
                   </SelectTrigger>
                   <SelectContent>
-                    {employees.map((emp) => (
-                      <SelectItem key={emp.id} value={emp.id}>
+                    {employees?.map((emp) => (
+                      <SelectItem key={emp.id} value={emp.id!}>
                         {emp.fullName}
                       </SelectItem>
                     ))}

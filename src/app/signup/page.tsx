@@ -8,52 +8,51 @@ import { ArogyaBioLogo } from '@/components/icons';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useAuth } from '@/firebase';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { useAuth, useFirestore } from '@/firebase';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { useUser } from '@/firebase';
 
-const loginSchema = z.object({
+const signupSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
-type LoginFormData = z.infer<typeof loginSchema>;
+type SignupFormData = z.infer<typeof signupSchema>;
 
-export default function LoginPage() {
+export default function SignupPage() {
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<LoginFormData>({
-    resolver: zodResolver(loginSchema),
+  } = useForm<SignupFormData>({
+    resolver: zodResolver(signupSchema),
   });
 
   const auth = useAuth();
+  const firestore = useFirestore();
   const router = useRouter();
-  const { user, loading } = useUser();
   const [authError, setAuthError] = useState<string | null>(null);
 
-  const onSubmit = async (data: LoginFormData) => {
+  const onSubmit = async (data: SignupFormData) => {
     setAuthError(null);
     try {
-      await signInWithEmailAndPassword(auth, data.email, data.password);
+      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+      const user = userCredential.user;
+
+      // Create a user profile in Firestore
+      await setDoc(doc(firestore, 'users', user.uid), {
+        email: user.email,
+        role: 'Admin', // Default to Admin for the first user
+      });
+
       router.push('/dashboard');
     } catch (error: any) {
       setAuthError(error.message);
     }
   };
-
-  if (loading) {
-    return <div className="flex h-screen items-center justify-center">Loading...</div>;
-  }
-
-  if (user) {
-    router.push('/dashboard');
-    return null;
-  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
@@ -62,34 +61,34 @@ export default function LoginPage() {
           <div className="mb-4 flex justify-center">
             <ArogyaBioLogo className="h-10 w-auto" />
           </div>
-          <CardTitle className="text-2xl font-headline">Welcome to ArogyaEMS</CardTitle>
-          <CardDescription>Enter your credentials to access your account</CardDescription>
+          <CardTitle className="text-2xl font-headline">Create an Account</CardTitle>
+          <CardDescription>Enter your email and password to sign up</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4">
             <div className="grid gap-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" placeholder="m@example.com" {...register('email')} />
+              <Input id="email" type="email" placeholder="admin@arogyabio.com" {...register('email')} />
               {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
             </div>
             <div className="grid gap-2">
               <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" {...register('password')} />
+              <Input id="password" type="password" placeholder="pass@arogyabio" {...register('password')} />
               {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
             </div>
             {authError && (
               <Alert variant="destructive">
-                <AlertTitle>Authentication Error</AlertTitle>
+                <AlertTitle>Sign-up Error</AlertTitle>
                 <AlertDescription>{authError}</AlertDescription>
               </Alert>
             )}
             <Button type="submit" className="w-full">
-              Login
+              Sign Up
             </Button>
-            <div className="text-center text-sm">
-                Don&apos;t have an account?{' '}
-                <Link href="/signup" className="underline">
-                    Sign up
+             <div className="text-center text-sm">
+                Already have an account?{' '}
+                <Link href="/" className="underline">
+                    Login
                 </Link>
             </div>
           </form>

@@ -6,24 +6,27 @@ import { Badge } from '@/components/ui/badge';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
 import { DollarSign, Users, Activity, CreditCard } from 'lucide-react';
-import { employees, payrolls, departments, advances } from '@/lib/mock-data';
-import type { Employee } from '@/lib/types';
+import type { Employee, Payroll, Department, Advance } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-
-// For this demo, we'll assume the role is 'admin'.
-// In a real app, this would come from the user's session.
-const USER_ROLE: 'admin' | 'manager' | 'employee' = 'admin';
+import { useCollection, useFirestore, useUser } from '@/firebase';
+import { collection, CollectionReference } from 'firebase/firestore';
 
 const AdminDashboard = () => {
-  const totalEmployees = employees.length;
-  const activeEmployees = employees.filter(e => e.status === 'Active').length;
-  const totalPayroll = payrolls.reduce((sum, p) => sum + p.netPayableSalary, 0);
-  const outstandingAdvances = advances.reduce((sum, a) => sum + a.remainingBalance, 0);
+  const firestore = useFirestore();
+  const { data: employees } = useCollection<Employee>(collection(firestore, 'employees'));
+  const { data: payrolls } = useCollection<Payroll>(collection(firestore, 'payrolls'));
+  const { data: departments } = useCollection<Department>(collection(firestore, 'departments'));
+  const { data: advances } = useCollection<Advance>(collection(firestore, 'advances'));
+  
+  const totalEmployees = employees?.length || 0;
+  const activeEmployees = employees?.filter(e => e.status === 'Active').length || 0;
+  const totalPayroll = payrolls?.reduce((sum, p) => sum + p.netPayableSalary, 0) || 0;
+  const outstandingAdvances = advances?.reduce((sum, a) => sum + a.remainingBalance, 0) || 0;
 
-  const employeesByDept = departments.map(dept => ({
+  const employeesByDept = departments?.map(dept => ({
     name: dept.name,
-    total: employees.filter(e => e.departmentId === dept.id).length,
+    total: employees?.filter(e => e.departmentId === dept.id).length || 0,
   }));
 
   const chartConfig = {
@@ -43,7 +46,7 @@ const AdminDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalEmployees}</div>
-            <p className="text-xs text-muted-foreground">+2 since last month</p>
+            <p className="text-xs text-muted-foreground">all-time</p>
           </CardContent>
         </Card>
         <Card>
@@ -96,8 +99,8 @@ const AdminDashboard = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {payrolls.slice(0, 5).map(p => {
-                  const employee = employees.find(e => e.id === p.employeeId);
+                {payrolls?.slice(0, 5).map(p => {
+                  const employee = employees?.find(e => e.id === p.employeeId);
                   return (
                     <TableRow key={p.id}>
                       <TableCell>
@@ -127,7 +130,7 @@ const AdminDashboard = () => {
               <BarChart accessibilityLayer data={employeesByDept} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} fontSize={12} />
-                <YAxis tickLine={false} axisLine={false} tickMargin={8} fontSize={12} />
+                <YAxis tickLine={false} axisLine={false} tickMargin={8} fontSize={12} allowDecimals={false}/>
                 <Tooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
                 <Bar dataKey="total" fill="var(--color-total)" radius={4} />
               </BarChart>
@@ -140,8 +143,11 @@ const AdminDashboard = () => {
 };
 
 const ManagerDashboard = () => {
-    // In a real app, you'd find the manager's team. Here we'll hardcode one.
-    const myTeam = employees.filter(e => e.teamId === 'T01');
+    const firestore = useFirestore();
+    const { user } = useUser();
+    // In a real app, you'd find the manager's team.
+    const { data: allEmployees } = useCollection<Employee>(collection(firestore, 'employees'));
+    const myTeam = allEmployees?.filter(e => e.teamId === 'T01'); // Hardcoded for now
     
     return (
         <Card>
@@ -160,7 +166,7 @@ const ManagerDashboard = () => {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {myTeam.map(e => (
+                        {myTeam?.map(e => (
                             <TableRow key={e.id}>
                                 <TableCell>{e.fullName}</TableCell>
                                 <TableCell><Badge variant={e.status === 'Active' ? 'default' : 'secondary'}>{e.status}</Badge></TableCell>
@@ -180,7 +186,11 @@ const ManagerDashboard = () => {
 }
 
 const EmployeeDashboard = () => {
-    const me = employees[2]; // Example employee
+    const { user } = useUser();
+    const firestore = useFirestore();
+    // In a real app, we'd fetch the employee doc corresponding to the user.
+    // For demo, we'll just show the user's email from auth.
+    const me = user;
     
     return (
         <div className="grid gap-6 md:grid-cols-3">
@@ -189,8 +199,7 @@ const EmployeeDashboard = () => {
                     <CardTitle className='font-headline'>My Profile</CardTitle>
                 </CardHeader>
                 <CardContent className="flex flex-col items-center text-center gap-4">
-                    <div className="font-semibold">{me.fullName}</div>
-                    <div className="text-sm text-muted-foreground">{me.role}</div>
+                    <div className="font-semibold">{me?.email}</div>
                     <Button>Edit Profile</Button>
                 </CardContent>
             </Card>
@@ -221,6 +230,10 @@ const EmployeeDashboard = () => {
 }
 
 export default function DashboardPage() {
+  // In a real app, this would come from the user's custom claims or a profile doc.
+  // For now, we'll assume anyone can be an admin.
+  const USER_ROLE: 'admin' | 'manager' | 'employee' = 'admin';
+
   const renderDashboard = () => {
     switch(USER_ROLE) {
       case 'admin':

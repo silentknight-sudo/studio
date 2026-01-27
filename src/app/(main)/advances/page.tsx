@@ -13,36 +13,45 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { advances as mockAdvances, employees } from "@/lib/mock-data"
-import type { Advance } from '@/lib/types';
-import { AdvanceForm } from './advance-form';
+import type { Advance, Employee } from '@/lib/types';
+import { AdvanceForm, AdvanceFormData } from './advance-form';
 import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialog';
+import { useFirestore, useCollection } from '@/firebase';
+import { addDoc, collection, doc, serverTimestamp, updateDoc, deleteDoc, CollectionReference } from 'firebase/firestore';
+import { addOrUpdateDoc, deleteDocument } from '@/lib/firebase-utils';
 
 export default function AdvancesPage() {
-    const [advances, setAdvances] = React.useState<Advance[]>(mockAdvances);
+    const firestore = useFirestore();
+    const { data: advances, loading: loadingAdvances } = useCollection<Advance>(collection(firestore, 'advances'));
+    const { data: employees, loading: loadingEmployees } = useCollection<Employee>(collection(firestore, 'employees'));
+    
     const [editingAdvance, setEditingAdvance] = React.useState<Advance | undefined>(undefined);
     const [isFormOpen, setIsFormOpen] = React.useState(false);
 
-    const handleSaveAdvance = (data: any) => {
+    const handleSaveAdvance = async (data: AdvanceFormData) => {
+        const docData = {
+            ...data,
+            issueDate: new Date().toISOString().split('T')[0],
+        };
+
         if (editingAdvance) {
-            setAdvances(advances.map(a => a.id === editingAdvance.id ? { ...a, ...data, remainingBalance: data.amount - (editingAdvance.amount - editingAdvance.remainingBalance) } : a));
+            await addOrUpdateDoc(
+                firestore, 
+                `advances/${editingAdvance.id}`, 
+                {...docData, remainingBalance: data.amount - (editingAdvance.amount - editingAdvance.remainingBalance)}
+            );
         } else {
-            const newAdvance: Advance = {
-                id: `A${String(advances.length + 1).padStart(3, '0')}`,
-                issueDate: new Date().toISOString().split('T')[0],
-                remainingBalance: data.amount,
-                ...data
-            };
-            setAdvances(prev => [...prev, newAdvance]);
+            await addOrUpdateDoc(firestore, 'advances', { ...docData, remainingBalance: data.amount });
         }
     }
 
-    const handleDeleteAdvance = (advanceId: string) => {
-        setAdvances(advances.filter(a => a.id !== advanceId));
+    const handleDeleteAdvance = async (advanceId: string) => {
+        await deleteDocument(firestore, `advances/${advanceId}`);
     }
 
-    const handleMarkAsPaid = (advanceId: string) => {
-        setAdvances(advances.map(a => a.id === advanceId ? { ...a, remainingBalance: 0 } : a));
+    const handleMarkAsPaid = async (advanceId: string) => {
+        const advanceRef = doc(firestore, 'advances', advanceId);
+        await updateDoc(advanceRef, { remainingBalance: 0 });
     }
 
     const handleEditClick = (advance: Advance) => {
@@ -54,6 +63,8 @@ export default function AdvancesPage() {
         setEditingAdvance(undefined);
         setIsFormOpen(true);
     }
+    
+    const getEmployee = (employeeId: string) => employees?.find(e => e.id === employeeId);
 
     return (
         <div className="w-full">
@@ -89,53 +100,59 @@ export default function AdvancesPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {advances.map(advance => {
-                                const employee = employees.find(e => e.id === advance.employeeId);
-                                const isPaid = advance.remainingBalance <= 0;
-                                return (
-                                    <TableRow key={advance.id}>
-                                        <TableCell>
-                                            <div className="font-medium">{employee?.fullName}</div>
-                                            <div className="text-sm text-muted-foreground">{employee?.email}</div>
-                                        </TableCell>
-                                        <TableCell>{advance.issueDate}</TableCell>
-                                        <TableCell>${advance.amount.toLocaleString()}</TableCell>
-                                        <TableCell className="hidden md:table-cell">{advance.repaymentType} ({advance.installments}x)</TableCell>
-                                        <TableCell>${advance.remainingBalance.toLocaleString()}</TableCell>
-                                        <TableCell>
-                                            <Badge variant={isPaid ? 'default' : 'secondary'}>
-                                                {isPaid ? 'Paid' : 'Unpaid'}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                             <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                <Button
-                                                    aria-haspopup="true"
-                                                    size="icon"
-                                                    variant="ghost"
-                                                >
-                                                    <MoreHorizontal className="h-4 w-4" />
-                                                    <span className="sr-only">Toggle menu</span>
-                                                </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                    <DropdownMenuItem onClick={() => handleEditClick(advance)}>Edit</DropdownMenuItem>
-                                                    {!isPaid && <DropdownMenuItem onClick={() => handleMarkAsPaid(advance.id)}>Mark as Paid</DropdownMenuItem>}
-                                                    <DeleteConfirmationDialog
-                                                        onConfirm={() => handleDeleteAdvance(advance.id)}
-                                                        itemName={`advance for ${employee?.fullName}`}
-                                                        itemType="advance"
+                            {(loadingAdvances || loadingEmployees) ? (
+                                <TableRow>
+                                    <TableCell colSpan={7} className="text-center">Loading...</TableCell>
+                                </TableRow>
+                            ) : (
+                                advances?.map(advance => {
+                                    const employee = getEmployee(advance.employeeId);
+                                    const isPaid = advance.remainingBalance <= 0;
+                                    return (
+                                        <TableRow key={advance.id}>
+                                            <TableCell>
+                                                <div className="font-medium">{employee?.fullName}</div>
+                                                <div className="text-sm text-muted-foreground">{employee?.email}</div>
+                                            </TableCell>
+                                            <TableCell>{advance.issueDate}</TableCell>
+                                            <TableCell>${advance.amount.toLocaleString()}</TableCell>
+                                            <TableCell className="hidden md:table-cell">{advance.repaymentType} ({advance.installments}x)</TableCell>
+                                            <TableCell>${advance.remainingBalance.toLocaleString()}</TableCell>
+                                            <TableCell>
+                                                <Badge variant={isPaid ? 'default' : 'secondary'}>
+                                                    {isPaid ? 'Paid' : 'Unpaid'}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                    <Button
+                                                        aria-haspopup="true"
+                                                        size="icon"
+                                                        variant="ghost"
                                                     >
-                                                        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>Delete</DropdownMenuItem>
-                                                    </DeleteConfirmationDialog>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </TableCell>
-                                    </TableRow>
-                                )
-                            })}
+                                                        <MoreHorizontal className="h-4 w-4" />
+                                                        <span className="sr-only">Toggle menu</span>
+                                                    </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                        <DropdownMenuItem onClick={() => handleEditClick(advance)}>Edit</DropdownMenuItem>
+                                                        {!isPaid && <DropdownMenuItem onClick={() => handleMarkAsPaid(advance.id!)}>Mark as Paid</DropdownMenuItem>}
+                                                        <DeleteConfirmationDialog
+                                                            onConfirm={() => handleDeleteAdvance(advance.id!)}
+                                                            itemName={`advance for ${employee?.fullName}`}
+                                                            itemType="advance"
+                                                        >
+                                                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>Delete</DropdownMenuItem>
+                                                        </DeleteConfirmationDialog>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </TableCell>
+                                        </TableRow>
+                                    )
+                                })
+                            )}
                         </TableBody>
                     </Table>
                 </CardContent>

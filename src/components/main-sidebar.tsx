@@ -23,6 +23,8 @@ import {
 import { ArogyaBioLogo } from '@/components/icons';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { useAuth, useUser } from '@/firebase';
+import { signOut } from 'firebase/auth';
 
 const userAvatar = PlaceHolderImages.find((img) => img.id === 'user-avatar');
 
@@ -36,6 +38,12 @@ const menuItems = [
 
 export function MainSidebar() {
   const pathname = usePathname();
+  const auth = useAuth();
+  const { user } = useUser();
+
+  const handleLogout = async () => {
+    await signOut(auth);
+  }
 
   return (
     <>
@@ -77,23 +85,25 @@ export function MainSidebar() {
               </SidebarMenuButton>
             </SidebarMenuItem>
              <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip={{ children: 'Logout', side: 'right' }}>
-                <Link href="/">
-                    <LogOut />
-                    <span>Logout</span>
-                </Link>
+              <SidebarMenuButton tooltip={{ children: 'Logout', side: 'right' }} onClick={handleLogout}>
+                <LogOut />
+                <span>Logout</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
          </SidebarMenu>
          <SidebarSeparator className='my-2' />
          <div className='flex items-center gap-3 px-2'>
             <Avatar className="h-9 w-9">
-                {userAvatar && <AvatarImage src={userAvatar.imageUrl} alt="Avatar" />}
-                <AvatarFallback>AD</AvatarFallback>
+                {user?.photoURL ? (
+                    <AvatarImage src={user.photoURL} alt="Avatar" />
+                ) : userAvatar && (
+                    <AvatarImage src={userAvatar.imageUrl} alt="Avatar" />
+                )}
+                <AvatarFallback>{user?.email?.[0].toUpperCase()}</AvatarFallback>
             </Avatar>
             <div className='overflow-hidden group-data-[collapsible=icon]:hidden'>
-                <p className='font-semibold text-sm truncate'>Admin User</p>
-                <p className='text-xs text-sidebar-foreground/70 truncate'>admin@arogyabio.com</p>
+                <p className='font-semibold text-sm truncate'>{user?.displayName || 'User'}</p>
+                <p className='text-xs text-sidebar-foreground/70 truncate'>{user?.email}</p>
             </div>
          </div>
       </SidebarFooter>
