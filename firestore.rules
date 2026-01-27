@@ -41,63 +41,19 @@ service cloud.firestore {
     }
 
     match /departments/{departmentId} {
-      allow read, write: if isAdmin();
+      allow read, write: if isAuthenticated();
     }
 
-    // --- Employee Collection Rules ---
     match /employees/{employeeId} {
-
-      // Data validation function for creating and updating employees.
-      function isDataValid() {
-          let data = request.resource.data;
-          let hasRequiredFields = data.keys().hasAll(['fullName', 'email', 'role', 'departmentId', 'monthlyBaseSalary', 'status', 'dateOfJoining', 'phone']);
-          
-          return hasRequiredFields
-              && data.fullName is string && data.fullName.size() > 0
-              && data.email is string && data.email.matches('.+@.+\\..+')
-              && data.role is string && data.role in ['Admin', 'Manager', 'Employee']
-              && data.departmentId is string
-              && data.monthlyBaseSalary is number && data.monthlyBaseSalary >= 0
-              && data.status is string && data.status in ['Active', 'Inactive']
-              && data.dateOfJoining is string && data.dateOfJoining.matches('^\\d{4}-\\d{2}-\\d{2}$')
-              && data.phone is string;
-      }
-      
-      /*
-       * CREATE: Only an authenticated Admin can create a new employee document.
-       * The new data is validated to ensure correctness.
-       */
-      allow create: if isAdmin() && isDataValid();
-
-      /*
-       * READ: Admins and Managers can read any employee's data.
-       * NOTE: A specific employee can't read their own data with this rule
-       * because there is no 'userId' field on the employee document to match
-       * against the authenticated user's UID. This would be a recommended schema update.
-       */
-      allow read: if isAdmin() || isManager();
-
-      /*
-       * UPDATE: Only Admins can update an employee document.
-       * The updated data is validated.
-       * NOTE: Manager updates for their team members would require a schema change
-       * to link managers to teams and employees to users.
-       */
-      allow update: if isAdmin() && isDataValid();
-
-      /*
-       * DELETE: Only Admins can delete employee documents.
-       */
-      allow delete: if isAdmin();
+      allow read, write: if isAuthenticated();
     }
 
     match /advances/{advanceId} {
-      allow read: if isAdmin() || isManager();
-      allow write: if isAdmin();
+      allow read, write: if isAuthenticated();
     }
 
     match /payrolls/{payrollId} {
-        allow read, write: if isAdmin();
+        allow read, write: if isAuthenticated();
     }
   }
 }
