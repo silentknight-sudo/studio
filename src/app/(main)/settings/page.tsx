@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useAuth } from '@/firebase';
+import { useAuth, useFirestore } from '@/firebase';
 import { updatePassword } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,8 +12,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Moon, Sun, Loader2 } from 'lucide-react';
+import { Moon, Sun, Loader2, AlertTriangle } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
+import { collection, getDocs, writeBatch } from 'firebase/firestore';
+import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialog';
 
 const passwordSchema = z.object({
     newPassword: z.string().min(6, 'Password must be at least 6 characters'),
@@ -130,21 +132,97 @@ function AppearanceSettings() {
     );
 }
 
+function DataSettings() {
+    const firestore = useFirestore();
+    const { toast } = useToast();
+    const [isResetting, setIsResetting] = useState(false);
+
+    const handleResetData = async () => {
+        setIsResetting(true);
+        try {
+            const collectionsToDelete = ['employees', 'departments', 'advances', 'payrolls'];
+            const batch = writeBatch(firestore);
+
+            for (const collectionName of collectionsToDelete) {
+                const collectionRef = collection(firestore, collectionName);
+                const snapshot = await getDocs(collectionRef);
+                snapshot.docs.forEach(doc => {
+                    batch.delete(doc.ref);
+                });
+            }
+
+            await batch.commit();
+
+            toast({
+                title: 'Data Reset Successful',
+                description: 'All application data has been cleared.',
+            });
+        } catch (error: any) {
+            console.error('Error resetting data:', error);
+            toast({
+                variant: 'destructive',
+                title: 'Error',
+                description: error.message || 'Failed to reset data.',
+            });
+        } finally {
+            setIsResetting(false);
+        }
+    };
+
+    return (
+        <Card className="border-destructive">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-destructive">
+                    <AlertTriangle />
+                    <span>Danger Zone</span>
+                </CardTitle>
+                <CardDescription>
+                    These actions are destructive and cannot be undone.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="flex items-center justify-between rounded-lg border border-destructive/50 p-4">
+                    <div>
+                        <h3 className="font-medium">Reset Application Data</h3>
+                        <p className="text-sm text-muted-foreground">
+                            This will permanently delete all employees, departments, advances, and payroll records. User accounts will not be affected.
+                        </p>
+                    </div>
+                    <DeleteConfirmationDialog
+                        onConfirm={handleResetData}
+                        itemName="ALL application data"
+                        itemType="data"
+                    >
+                        <Button variant="destructive" disabled={isResetting}>
+                            {isResetting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Reset All Data
+                        </Button>
+                    </DeleteConfirmationDialog>
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
+
 
 export default function SettingsPage() {
     return (
         <div className="w-full space-y-6">
             <h1 className="text-3xl font-bold font-headline">Settings</h1>
              <Tabs defaultValue="account" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
+                <TabsList className="grid w-full grid-cols-3">
                     <TabsTrigger value="account">Account</TabsTrigger>
                     <TabsTrigger value="appearance">Appearance</TabsTrigger>
+                    <TabsTrigger value="data">Data</TabsTrigger>
                 </TabsList>
                 <TabsContent value="account" className="mt-6">
                     <AccountSettings />
                 </TabsContent>
                 <TabsContent value="appearance" className="mt-6">
                     <AppearanceSettings />
+                </TabsContent>
+                <TabsContent value="data" className="mt-6">
+                    <DataSettings />
                 </TabsContent>
             </Tabs>
         </div>
