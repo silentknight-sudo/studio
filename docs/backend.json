@@ -14,6 +14,15 @@
           "type": "string",
           "enum": ["Admin", "Manager", "Employee"],
           "description": "The user's role in the system."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "The user's display name."
+        },
+        "photoURL": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL for the user's profile photo."
         }
       },
       "required": ["email", "role"]

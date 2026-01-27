@@ -22,7 +22,7 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Search, LogOut, User, Settings } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Fragment } from 'react';
 import { useAuth, useUser } from '@/firebase';
@@ -44,6 +44,7 @@ function generateBreadcrumbs(pathname: string) {
 export function Header() {
     const isMobile = useIsMobile();
     const pathname = usePathname();
+    const router = useRouter();
     const breadcrumbs = generateBreadcrumbs(pathname);
     const auth = useAuth();
     const { user } = useUser();
@@ -118,8 +119,8 @@ export function Header() {
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>{user?.email || "My Account"}</DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem><User className='mr-2' /> Profile</DropdownMenuItem>
-          <DropdownMenuItem><Settings className='mr-2'/> Settings</DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => router.push('/profile')}><User className='mr-2' /> Profile</DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => router.push('/settings')}><Settings className='mr-2'/> Settings</DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleLogout}>
             <LogOut className='mr-2'/> Logout

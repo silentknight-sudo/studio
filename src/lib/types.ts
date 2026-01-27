@@ -74,4 +74,6 @@ export interface UserProfile {
     id?: string;
     email: string;
     role: Role;
+    displayName?: string;
+    photoURL?: string;
 }
