@@ -1,24 +1,41 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    function isUserInRole(role) {
+      // Safely access role, return false if user doc or role doesn't exist.
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
+    }
+
     // Users can only read/write their own profile
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
+      // Allow admins to read any user profile.
+      allow list, get: if request.auth != null && isUserInRole('Admin');
     }
 
-    // Authenticated users can read/write app data.
-    // TODO: Add role-based access control.
+    // Only Admins can manage departments
     match /departments/{departmentId} {
-      allow read, write: if request.auth != null;
+      allow read, write: if request.auth != null && isUserInRole('Admin');
     }
+
+    // Admins can manage all employees.
+    // Managers can read all employees.
     match /employees/{employeeId} {
-      allow read, write: if request.auth != null;
+      allow read: if request.auth != null && (isUserInRole('Admin') || isUserInRole('Manager'));
+      allow write: if request.auth != null && isUserInRole('Admin');
     }
+
+    // Advances can be read by admins/managers.
+    // Advances can be written by admins.
     match /advances/{advanceId} {
-      allow read, write: if request.auth != null;
+      allow read: if request.auth != null && (isUserInRole('Admin') || isUserInRole('Manager'));
+      allow write: if request.auth != null && isUserInRole('Admin');
     }
+
+    // Payrolls can only be managed by Admins.
     match /payrolls/{payrollId} {
-        allow read, write: if request.auth != null;
+        allow read, write: if request.auth != null && isUserInRole('Admin');
     }
   }
 }
