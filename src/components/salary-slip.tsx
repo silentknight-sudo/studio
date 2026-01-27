@@ -59,8 +59,8 @@ export function SalarySlipDisplay({ slip }: SalarySlipDisplayProps) {
               <h3 className="font-semibold text-primary">Company Details</h3>
               <Separator className="my-2" />
               <p><strong>Arogya Bio</strong></p>
-              <p>123 Biotech Lane</p>
-              <p>Science City, SC 45678</p>
+              <p>68, 1st floor, the hemisphere galleria, sector-27</p>
+              <p>Greater noida, Uttar Pradesh, 201310</p>
             </div>
           </div>
           
