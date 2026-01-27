@@ -65,7 +65,7 @@ const AdminDashboard = () => {
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalPayroll.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})} INR</div>
+            <div className="text-2xl font-bold">{totalPayroll.toLocaleString('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace('₹', '')} INR</div>
             <p className="text-xs text-muted-foreground">For {new Date().toLocaleString('default', { month: 'long' })}</p>
           </CardContent>
         </Card>
@@ -75,7 +75,7 @@ const AdminDashboard = () => {
             <Banknote className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{outstandingAdvances.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})} INR</div>
+            <div className="text-2xl font-bold">{outstandingAdvances.toLocaleString('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace('₹', '')} INR</div>
             <p className="text-xs text-muted-foreground">Across all employees</p>
           </CardContent>
         </Card>
@@ -110,7 +110,7 @@ const AdminDashboard = () => {
                         </div>
                       </TableCell>
                       <TableCell className="hidden sm:table-cell">{employee?.role}</TableCell>
-                      <TableCell>{p.netPayableSalary.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})} INR</TableCell>
+                      <TableCell>{p.netPayableSalary.toLocaleString('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace('₹', '')} INR</TableCell>
                       <TableCell>{p.month}</TableCell>
                       <TableCell className='text-right'><Badge>Paid</Badge></TableCell>
                     </TableRow>
@@ -239,8 +239,18 @@ export default function DashboardPage() {
   if (userLoading || profileLoading) {
     return <div className="text-center">Loading dashboard...</div>;
   }
+
+  // This is the fix. Explicitly check for the profile and role before using them.
+  if (!userProfile || !userProfile.role) {
+      return (
+        <div className="w-full">
+          <h1 className="text-3xl font-bold font-headline mb-6">Dashboard</h1>
+          <div>Loading user role... If this persists, you may not have a role assigned.</div>
+        </div>
+      );
+  }
   
-  const USER_ROLE = userProfile?.role?.toLowerCase() as 'admin' | 'manager' | 'employee' | undefined;
+  const USER_ROLE = userProfile.role.toLowerCase() as 'admin' | 'manager' | 'employee';
 
   const renderDashboard = () => {
     switch(USER_ROLE) {
@@ -251,7 +261,7 @@ export default function DashboardPage() {
       case 'employee':
         return <EmployeeDashboard />;
       default:
-        return <div>Loading user role... If this persists, you may not have a role assigned.</div>;
+        return <div>An unexpected error occurred with the user role.</div>;
     }
   }
 
