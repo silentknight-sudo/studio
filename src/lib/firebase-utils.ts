@@ -20,34 +20,15 @@ import {
       ? collection(db, path)
       : doc(db, path);
   
-    try {
-      if (isCollection) {
-        await addDoc(ref as any, data);
-      } else {
-        await setDoc(ref as any, data, { merge });
-      }
-    } catch (serverError) {
-        const permissionError = new FirestorePermissionError({
-          path: ref.path,
-          operation: 'write',
-          requestResourceData: data,
-        });
-        errorEmitter.emit('permission-error', permissionError);
-        throw permissionError; // re-throw to be caught by component
+    if (isCollection) {
+      await addDoc(ref as any, data);
+    } else {
+      await setDoc(ref as any, data, { merge });
     }
   }
   
   export async function deleteDocument(db: Firestore, path: string) {
     const ref = doc(db, path);
-    try {
-        await deleteDoc(ref);
-    } catch(serverError) {
-        const permissionError = new FirestorePermissionError({
-            path: ref.path,
-            operation: 'delete',
-        });
-        errorEmitter.emit('permission-error', permissionError);
-        throw permissionError;
-    }
+    await deleteDoc(ref);
   }
   
