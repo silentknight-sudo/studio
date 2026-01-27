@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useTransition, useEffect } from 'react';
+import React, { useState, useTransition, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -37,8 +37,11 @@ export function SalarySlipGenerator({ employee }: { employee: Employee }) {
   const { data: department } = useDoc<Department>(doc(firestore, 'departments', employee.departmentId));
   const { data: team } = useDoc<Team>(employee.teamId ? doc(firestore, 'teams', employee.teamId) : null);
 
-  const advancesRef = collection(firestore, 'advances');
-  const advancesQuery = query(advancesRef, where('employeeId', '==', employee.id!), where('remainingBalance', '>', 0));
+  const advancesQuery = useMemo(() => {
+    if (!firestore || !employee.id) return null;
+    return query(collection(firestore, 'advances'), where('employeeId', '==', employee.id), where('remainingBalance', '>', 0));
+  }, [firestore, employee.id]);
+  
   const { data: advances, loading: loadingAdvances } = useCollection<Advance>(advancesQuery);
 
   useEffect(() => {
