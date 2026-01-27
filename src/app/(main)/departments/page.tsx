@@ -15,30 +15,56 @@ import {
 import { departments as mockDepartments, employees } from "@/lib/mock-data"
 import type { Department } from '@/lib/types';
 import { DepartmentForm } from './department-form';
+import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialog';
 
 export default function DepartmentsPage() {
     const [departments, setDepartments] = React.useState<Department[]>(mockDepartments);
+    const [editingDepartment, setEditingDepartment] = React.useState<Department | undefined>(undefined);
+    const [isFormOpen, setIsFormOpen] = React.useState(false);
 
     const handleSaveDepartment = (data: { name: string }) => {
-        const newDepartment: Department = {
-            id: `D${String(departments.length + 1).padStart(2, '0')}`,
-            name: data.name
-        };
-        setDepartments(prev => [...prev, newDepartment]);
-        console.log("New department data:", newDepartment);
+        if (editingDepartment) {
+            setDepartments(departments.map(d => d.id === editingDepartment.id ? { ...d, ...data } : d));
+        } else {
+            const newDepartment: Department = {
+                id: `D${String(departments.length + 1).padStart(2, '0')}`,
+                name: data.name
+            };
+            setDepartments(prev => [...prev, newDepartment]);
+        }
+    }
+
+    const handleDeleteDepartment = (departmentId: string) => {
+        setDepartments(departments.filter(d => d.id !== departmentId));
+    }
+
+    const handleEditClick = (department: Department) => {
+        setEditingDepartment(department);
+        setIsFormOpen(true);
+    }
+
+    const handleNewClick = () => {
+        setEditingDepartment(undefined);
+        setIsFormOpen(true);
     }
 
     return (
         <div className="w-full">
             <div className="flex items-center justify-between mb-6">
                 <h1 className="text-3xl font-bold font-headline">Departments</h1>
-                <DepartmentForm onSave={handleSaveDepartment}>
-                    <Button>
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        New Department
-                    </Button>
-                </DepartmentForm>
+                <Button onClick={handleNewClick}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    New Department
+                </Button>
             </div>
+
+            <DepartmentForm 
+                isOpen={isFormOpen}
+                onOpenChange={setIsFormOpen}
+                onSave={handleSaveDepartment}
+                department={editingDepartment}
+            />
+
             <Card>
                 <CardHeader>
                     <CardTitle>Department List</CardTitle>
@@ -73,9 +99,15 @@ export default function DepartmentsPage() {
                                                 </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
-                                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                <DropdownMenuItem>Edit</DropdownMenuItem>
-                                                <DropdownMenuItem>Delete</DropdownMenuItem>
+                                                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                    <DropdownMenuItem onClick={() => handleEditClick(dept)}>Edit</DropdownMenuItem>
+                                                    <DeleteConfirmationDialog
+                                                        onConfirm={() => handleDeleteDepartment(dept.id)}
+                                                        itemName={dept.name}
+                                                        itemType="department"
+                                                    >
+                                                        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>Delete</DropdownMenuItem>
+                                                    </DeleteConfirmationDialog>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
                                         </TableCell>

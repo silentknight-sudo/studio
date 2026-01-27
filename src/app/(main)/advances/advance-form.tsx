@@ -7,7 +7,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
@@ -39,11 +38,11 @@ type AdvanceFormData = z.infer<typeof advanceSchema>;
 interface AdvanceFormProps {
   advance?: Advance;
   onSave: (data: AdvanceFormData) => void;
-  children: React.ReactNode;
+  isOpen: boolean;
+  onOpenChange: (isOpen: boolean) => void;
 }
 
-export function AdvanceForm({ advance, onSave, children }: AdvanceFormProps) {
-  const [isOpen, setIsOpen] = React.useState(false);
+export function AdvanceForm({ advance, onSave, isOpen, onOpenChange }: AdvanceFormProps) {
   const {
     register,
     handleSubmit,
@@ -53,28 +52,31 @@ export function AdvanceForm({ advance, onSave, children }: AdvanceFormProps) {
     formState: { errors },
   } = useForm<AdvanceFormData>({
     resolver: zodResolver(advanceSchema),
-    defaultValues: {
-        employeeId: advance?.employeeId || '',
-        amount: advance?.amount || 0,
-        repaymentType: advance?.repaymentType || 'Single-month',
-        installments: advance?.installments || 1,
-    },
   });
 
   const repaymentType = watch('repaymentType');
+
+  React.useEffect(() => {
+    if (isOpen) {
+      reset({
+          employeeId: advance?.employeeId || '',
+          amount: advance?.amount || 0,
+          repaymentType: advance?.repaymentType || 'Single-month',
+          installments: advance?.installments || 1,
+      });
+    }
+  }, [isOpen, advance, reset]);
 
   const onSubmit = (data: AdvanceFormData) => {
     if (data.repaymentType === 'Single-month') {
         data.installments = 1;
     }
     onSave(data);
-    setIsOpen(false);
-    reset();
+    onOpenChange(false);
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>{children}</DialogTrigger>
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{advance ? 'Edit Advance' : 'New Advance'}</DialogTitle>
@@ -89,7 +91,7 @@ export function AdvanceForm({ advance, onSave, children }: AdvanceFormProps) {
               name="employeeId"
               control={control}
               render={({ field }) => (
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!!advance}>
                   <SelectTrigger id="employeeId">
                     <SelectValue placeholder="Select an employee" />
                   </SelectTrigger>

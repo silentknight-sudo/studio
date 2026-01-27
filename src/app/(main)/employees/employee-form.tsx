@@ -7,7 +7,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
@@ -25,7 +24,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { Employee } from '@/lib/types';
 import { departments, teams } from '@/lib/mock-data';
-import { PlusCircle } from 'lucide-react';
 import React from 'react';
 
 const employeeSchema = z.object({
@@ -42,11 +40,11 @@ type EmployeeFormData = z.infer<typeof employeeSchema>;
 interface EmployeeFormProps {
   employee?: Employee;
   onSave: (data: EmployeeFormData) => void;
-  children: React.ReactNode;
+  isOpen: boolean;
+  onOpenChange: (isOpen: boolean) => void;
 }
 
-export function EmployeeForm({ employee, onSave, children }: EmployeeFormProps) {
-  const [isOpen, setIsOpen] = React.useState(false);
+export function EmployeeForm({ employee, onSave, isOpen, onOpenChange }: EmployeeFormProps) {
   const {
     register,
     handleSubmit,
@@ -55,25 +53,29 @@ export function EmployeeForm({ employee, onSave, children }: EmployeeFormProps) 
     formState: { errors },
   } = useForm<EmployeeFormData>({
     resolver: zodResolver(employeeSchema),
-    defaultValues: {
-      fullName: employee?.fullName || '',
-      email: employee?.email || '',
-      role: employee?.role || 'Employee',
-      departmentId: employee?.departmentId || '',
-      teamId: employee?.teamId || undefined,
-      monthlyBaseSalary: employee?.monthlyBaseSalary || 0,
-    },
   });
+
+  React.useEffect(() => {
+    if (isOpen) {
+        reset({
+            fullName: employee?.fullName || '',
+            email: employee?.email || '',
+            role: employee?.role || 'Employee',
+            departmentId: employee?.departmentId || '',
+            teamId: employee?.teamId || undefined,
+            monthlyBaseSalary: employee?.monthlyBaseSalary || 0,
+        });
+    }
+  }, [isOpen, employee, reset]);
+
 
   const onSubmit = (data: EmployeeFormData) => {
     onSave(data);
-    setIsOpen(false);
-    reset();
+    onOpenChange(false);
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>{children}</DialogTrigger>
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{employee ? 'Edit Employee' : 'New Employee'}</DialogTitle>

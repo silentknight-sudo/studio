@@ -7,7 +7,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
@@ -28,11 +27,11 @@ type DepartmentFormData = z.infer<typeof departmentSchema>;
 interface DepartmentFormProps {
   department?: Department;
   onSave: (data: DepartmentFormData) => void;
-  children: React.ReactNode;
+  isOpen: boolean;
+  onOpenChange: (isOpen: boolean) => void;
 }
 
-export function DepartmentForm({ department, onSave, children }: DepartmentFormProps) {
-  const [isOpen, setIsOpen] = React.useState(false);
+export function DepartmentForm({ department, onSave, isOpen, onOpenChange }: DepartmentFormProps) {
   const {
     register,
     handleSubmit,
@@ -45,15 +44,21 @@ export function DepartmentForm({ department, onSave, children }: DepartmentFormP
     },
   });
 
+  React.useEffect(() => {
+    if (isOpen) {
+      reset({
+        name: department?.name || '',
+      });
+    }
+  }, [isOpen, department, reset]);
+
   const onSubmit = (data: DepartmentFormData) => {
     onSave(data);
-    setIsOpen(false);
-    reset();
+    onOpenChange(false);
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>{children}</DialogTrigger>
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{department ? 'Edit Department' : 'New Department'}</DialogTitle>
