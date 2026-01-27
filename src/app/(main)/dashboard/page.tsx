@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
-import { DollarSign, Users, Activity, CreditCard } from 'lucide-react';
+import { HandCoins, Users, Activity, CreditCard } from 'lucide-react';
 import type { Employee, Payroll, Department, Advance, UserProfile } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -65,17 +65,17 @@ const AdminDashboard = () => {
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₹{totalPayroll.toLocaleString('en-IN')}</div>
+            <div className="text-2xl font-bold">{totalPayroll.toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}</div>
             <p className="text-xs text-muted-foreground">For {new Date().toLocaleString('default', { month: 'long' })}</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Outstanding Advances</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <HandCoins className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₹{outstandingAdvances.toLocaleString('en-IN')}</div>
+            <div className="text-2xl font-bold">{outstandingAdvances.toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}</div>
             <p className="text-xs text-muted-foreground">Across all employees</p>
           </CardContent>
         </Card>
@@ -110,7 +110,7 @@ const AdminDashboard = () => {
                         </div>
                       </TableCell>
                       <TableCell className="hidden sm:table-cell">{employee?.role}</TableCell>
-                      <TableCell>₹{p.netPayableSalary.toLocaleString('en-IN')}</TableCell>
+                      <TableCell>{p.netPayableSalary.toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}</TableCell>
                       <TableCell>{p.month}</TableCell>
                       <TableCell className='text-right'><Badge>Paid</Badge></TableCell>
                     </TableRow>

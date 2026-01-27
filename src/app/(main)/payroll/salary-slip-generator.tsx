@@ -88,7 +88,7 @@ export function SalarySlipGenerator({ employee }: { employee: Employee }) {
               <Label htmlFor="base-salary" className="text-right">
                 Base Salary
               </Label>
-              <Input id="base-salary" value={`₹${employee.monthlyBaseSalary.toLocaleString('en-IN')}`} disabled className="col-span-3" />
+              <Input id="base-salary" value={employee.monthlyBaseSalary.toLocaleString('en-IN', { style: 'currency', currency: 'INR' })} disabled className="col-span-3" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="advance-deduction" className="text-right">

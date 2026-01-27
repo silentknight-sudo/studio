@@ -115,9 +115,9 @@ export default function AdvancesPage() {
                                                 <div className="text-sm text-muted-foreground">{employee?.email}</div>
                                             </TableCell>
                                             <TableCell>{advance.issueDate}</TableCell>
-                                            <TableCell>₹{advance.amount.toLocaleString('en-IN')}</TableCell>
+                                            <TableCell>{advance.amount.toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}</TableCell>
                                             <TableCell className="hidden md:table-cell">{advance.repaymentType} ({advance.installments}x)</TableCell>
-                                            <TableCell>₹{advance.remainingBalance.toLocaleString('en-IN')}</TableCell>
+                                            <TableCell>{advance.remainingBalance.toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}</TableCell>
                                             <TableCell>
                                                 <Badge variant={isPaid ? 'default' : 'secondary'}>
                                                     {isPaid ? 'Paid' : 'Unpaid'}
