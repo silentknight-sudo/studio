@@ -22,7 +22,7 @@ import { SalarySlipDisplay } from '@/components/salary-slip';
 import { useFirestore, useDoc, useCollection } from '@/firebase';
 import { doc, query, collection, where } from 'firebase/firestore';
 import { addOrUpdateDoc } from '@/lib/firebase-utils';
-import jsPDF from 'jsPDF';
+import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 
 export function SalarySlipGenerator({ employee }: { employee: Employee }) {
@@ -37,7 +37,8 @@ export function SalarySlipGenerator({ employee }: { employee: Employee }) {
   const { data: department } = useDoc<Department>(doc(firestore, 'departments', employee.departmentId));
   const { data: team } = useDoc<Team>(employee.teamId ? doc(firestore, 'teams', employee.teamId) : null);
 
-  // Simplified query to avoid composite index requirements
+  // Use memoized query to fetch all advances for the employee
+  // We filter for active advances (remainingBalance > 0) in memory to avoid needing composite indexes
   const advancesQuery = useMemo(() => {
     if (!firestore || !employee.id) return null;
     return query(
@@ -51,7 +52,6 @@ export function SalarySlipGenerator({ employee }: { employee: Employee }) {
   useEffect(() => {
     if (advances && advances.length > 0) {
         // Filter in-memory to find active advances (remainingBalance > 0)
-        // This avoids the "Missing or insufficient permissions" or "Index required" errors for complex queries
         const unpaidAdvances = advances.filter(a => a.remainingBalance > 0);
         
         if (unpaidAdvances.length > 0) {
