@@ -5,20 +5,24 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
-import { Banknote, Users, Activity, CreditCard } from 'lucide-react';
+import { Banknote, Users, Activity, CreditCard, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import type { Employee, Payroll, Department, Advance, UserProfile } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useCollection, useFirestore, useUser, useDoc } from '@/firebase';
-import { collection, CollectionReference, doc } from 'firebase/firestore';
+import { collection, doc } from 'firebase/firestore';
 
-const AdminDashboard = () => {
-  const firestore = useFirestore();
-  const { data: employees } = useCollection<Employee>(collection(firestore, 'employees'));
-  const { data: payrolls } = useCollection<Payroll>(collection(firestore, 'payrolls'));
-  const { data: departments } = useCollection<Department>(collection(firestore, 'departments'));
-  const { data: advances } = useCollection<Advance>(collection(firestore, 'advances'));
-  
+const AdminDashboard = ({ 
+  employees, 
+  payrolls, 
+  departments, 
+  advances 
+}: { 
+  employees: Employee[] | null, 
+  payrolls: Payroll[] | null, 
+  departments: Department[] | null, 
+  advances: Advance[] | null 
+}) => {
   const totalEmployees = employees?.length || 0;
   const activeEmployees = employees?.filter(e => e.status === 'Active').length || 0;
   const totalPayroll = payrolls?.reduce((sum, p) => sum + p.netPayableSalary, 0) || 0;
@@ -46,7 +50,7 @@ const AdminDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalEmployees}</div>
-            <p className="text-xs text-muted-foreground">all-time</p>
+            <p className="text-xs text-muted-foreground">registered in system</p>
           </CardContent>
         </Card>
         <Card>
@@ -61,12 +65,12 @@ const AdminDashboard = () => {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Monthly Payroll</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Payroll Paid</CardTitle>
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalPayroll.toLocaleString('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace('₹', '')} INR</div>
-            <p className="text-xs text-muted-foreground">For {new Date().toLocaleString('default', { month: 'long' })}</p>
+            <div className="text-2xl font-bold">{totalPayroll.toLocaleString('en-IN')} INR</div>
+            <p className="text-xs text-muted-foreground">all-time disbursements</p>
           </CardContent>
         </Card>
         <Card>
@@ -75,8 +79,8 @@ const AdminDashboard = () => {
             <Banknote className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{outstandingAdvances.toLocaleString('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace('₹', '')} INR</div>
-            <p className="text-xs text-muted-foreground">Across all employees</p>
+            <div className="text-2xl font-bold">{outstandingAdvances.toLocaleString('en-IN')} INR</div>
+            <p className="text-xs text-muted-foreground">to be recovered</p>
           </CardContent>
         </Card>
       </div>
@@ -84,46 +88,51 @@ const AdminDashboard = () => {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         <Card className="lg:col-span-4">
           <CardHeader>
-            <CardTitle className='font-headline'>Recent Payroll</CardTitle>
-            <CardDescription>An overview of the most recent payroll runs.</CardDescription>
+            <CardTitle className='font-headline'>Full Payment History</CardTitle>
+            <CardDescription>Detailed breakdown of all processed payrolls and deductions.</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Employee</TableHead>
-                  <TableHead className="hidden sm:table-cell">Role</TableHead>
-                  <TableHead>Salary</TableHead>
                   <TableHead>Month</TableHead>
-                  <TableHead className='text-right'>Status</TableHead>
+                  <TableHead>Gross</TableHead>
+                  <TableHead>Deduction</TableHead>
+                  <TableHead className='text-right'>Net Paid</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {payrolls?.slice(0, 5).map(p => {
+                {payrolls?.sort((a, b) => b.month.localeCompare(a.month)).map(p => {
                   const employee = employees?.find(e => e.id === p.employeeId);
                   return (
                     <TableRow key={p.id}>
                       <TableCell>
-                        <div className="font-medium">{employee?.fullName}</div>
-                        <div className="hidden text-sm text-muted-foreground md:inline">
+                        <div className="font-medium">{employee?.fullName || 'Deleted Employee'}</div>
+                        <div className="hidden text-xs text-muted-foreground md:inline">
                           {employee?.email}
                         </div>
                       </TableCell>
-                      <TableCell className="hidden sm:table-cell">{employee?.role}</TableCell>
-                      <TableCell>{p.netPayableSalary.toLocaleString('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace('₹', '')} INR</TableCell>
                       <TableCell>{p.month}</TableCell>
-                      <TableCell className='text-right'><Badge>Paid</Badge></TableCell>
+                      <TableCell>{p.grossSalary.toLocaleString('en-IN')} INR</TableCell>
+                      <TableCell className="text-destructive">-{p.advanceDeduction.toLocaleString('en-IN')} INR</TableCell>
+                      <TableCell className='text-right font-bold'>{p.netPayableSalary.toLocaleString('en-IN')} INR</TableCell>
                     </TableRow>
                   );
                 })}
+                {(!payrolls || payrolls.length === 0) && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">No payment records found.</TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </CardContent>
         </Card>
         <Card className="lg:col-span-3">
           <CardHeader>
-            <CardTitle className='font-headline'>Employees by Department</CardTitle>
-            <CardDescription>Distribution of employees across different departments.</CardDescription>
+            <CardTitle className='font-headline'>Department Distribution</CardTitle>
+            <CardDescription>Headcount breakdown across company departments.</CardDescription>
           </CardHeader>
           <CardContent>
             <ChartContainer config={chartConfig} className="h-[300px] w-full">
@@ -142,18 +151,14 @@ const AdminDashboard = () => {
   );
 };
 
-const ManagerDashboard = () => {
-    const firestore = useFirestore();
-    const { user } = useUser();
-    // In a real app, you'd find the manager's team.
-    const { data: allEmployees } = useCollection<Employee>(collection(firestore, 'employees'));
-    const myTeam = allEmployees?.filter(e => e.teamId === 'T01'); // Hardcoded for now
+const ManagerDashboard = ({ employees }: { employees: Employee[] | null }) => {
+    const myTeam = employees?.filter(e => e.teamId === 'T01'); // Mock team filter
     
     return (
         <Card>
             <CardHeader>
-                <CardTitle className='font-headline'>My Team</CardTitle>
-                <CardDescription>Overview of your direct reports.</CardDescription>
+                <CardTitle className='font-headline'>Team Overview</CardTitle>
+                <CardDescription>Performance and status of your direct reports.</CardDescription>
             </CardHeader>
             <CardContent>
                 <Table>
@@ -161,7 +166,6 @@ const ManagerDashboard = () => {
                         <TableRow>
                             <TableHead>Name</TableHead>
                             <TableHead>Status</TableHead>
-                            <TableHead>Last Check-in</TableHead>
                             <TableHead className='text-right'>Actions</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -170,10 +174,9 @@ const ManagerDashboard = () => {
                             <TableRow key={e.id}>
                                 <TableCell>{e.fullName}</TableCell>
                                 <TableCell><Badge variant={e.status === 'Active' ? 'default' : 'secondary'}>{e.status}</Badge></TableCell>
-                                <TableCell>Today, 9:03 AM</TableCell>
                                 <TableCell className='text-right'>
                                     <Button variant="ghost" size="sm" asChild>
-                                        <Link href="#">View</Link>
+                                        <Link href={`/employees`}>View Details</Link>
                                     </Button>
                                 </TableCell>
                             </TableRow>
@@ -185,44 +188,69 @@ const ManagerDashboard = () => {
     );
 }
 
-const EmployeeDashboard = () => {
-    const { user } = useUser();
+const EmployeeDashboard = ({ payrolls, me }: { payrolls: Payroll[] | null, me: UserProfile | null }) => {
+    // Filter payrolls for the current logged in employee
+    // In this simplified setup, we match by email if the employee record exists
     const firestore = useFirestore();
-    // In a real app, we'd fetch the employee doc corresponding to the user.
-    // For demo, we'll just show the user's email from auth.
-    const me = user;
-    
+    const { data: allEmployees } = useCollection<Employee>(collection(firestore, 'employees'));
+    const myRecord = allEmployees?.find(e => e.email === me?.email);
+    const myPayrolls = payrolls?.filter(p => p.employeeId === myRecord?.id);
+
     return (
         <div className="grid gap-6 md:grid-cols-3">
             <Card className="md:col-span-1">
                 <CardHeader>
                     <CardTitle className='font-headline'>My Profile</CardTitle>
                 </CardHeader>
-                <CardContent className="flex flex-col items-center text-center gap-4">
-                    <div className="font-semibold">{me?.email}</div>
-                    <Button>Edit Profile</Button>
+                <CardContent className="flex flex-col items-center text-center gap-6">
+                    <div className="h-24 w-24 rounded-full bg-secondary flex items-center justify-center text-3xl font-bold">
+                        {me?.displayName?.[0] || me?.email[0].toUpperCase()}
+                    </div>
+                    <div>
+                        <div className="text-xl font-bold">{me?.displayName || 'Set your name'}</div>
+                        <div className="text-sm text-muted-foreground">{me?.email}</div>
+                        <Badge variant="outline" className="mt-2">{me?.role}</Badge>
+                    </div>
+                    <Button variant="outline" className="w-full" asChild>
+                        <Link href="/profile">Edit Profile</Link>
+                    </Button>
                 </CardContent>
             </Card>
             <Card className="md:col-span-2">
                 <CardHeader>
-                    <CardTitle className='font-headline'>My Activity</CardTitle>
-                    <CardDescription>Your recent check-ins and salary slips.</CardDescription>
+                    <CardTitle className='font-headline'>My Payment History</CardTitle>
+                    <CardDescription>A complete log of your salary transfers and advance deductions.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <div className="flex justify-between items-center p-4 border rounded-lg mb-4">
-                        <div>
-                            <p className="font-medium">Today's Status</p>
-                            <p className="text-sm text-muted-foreground">You haven't checked in yet.</p>
-                        </div>
-                        <Button>Check In</Button>
-                    </div>
-                     <div className="flex justify-between items-center p-4 border rounded-lg">
-                        <div>
-                            <p className="font-medium">Latest Salary Slip</p>
-                            <p className="text-sm text-muted-foreground">June 2024</p>
-                        </div>
-                        <Button variant="outline">Download</Button>
-                    </div>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Month</TableHead>
+                                <TableHead>Gross</TableHead>
+                                <TableHead>Deduction</TableHead>
+                                <TableHead className="text-right">Net Paid</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {myPayrolls?.sort((a, b) => b.month.localeCompare(a.month)).map(p => (
+                                <TableRow key={p.id}>
+                                    <TableCell className="font-medium">{p.month}</TableCell>
+                                    <TableCell>{p.grossSalary.toLocaleString('en-IN')} INR</TableCell>
+                                    <TableCell className="text-destructive">-{p.advanceDeduction.toLocaleString('en-IN')} INR</TableCell>
+                                    <TableCell className="text-right font-bold text-primary">
+                                        {p.netPayableSalary.toLocaleString('en-IN')} INR
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                            {(!myPayrolls || myPayrolls.length === 0) && (
+                                <TableRow>
+                                    <TableCell colSpan={4} className="text-center py-10 text-muted-foreground italic">
+                                        No payment records found. Payments will appear here once processed.
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
                 </CardContent>
             </Card>
         </div>
@@ -232,20 +260,27 @@ const EmployeeDashboard = () => {
 export default function DashboardPage() {
   const { user, loading: userLoading } = useUser();
   const firestore = useFirestore();
+  
   const { data: userProfile, loading: profileLoading } = useDoc<UserProfile>(
     user ? doc(firestore, 'users', user.uid) : null
   );
+
+  const { data: employees } = useCollection<Employee>(collection(firestore, 'employees'));
+  const { data: payrolls } = useCollection<Payroll>(collection(firestore, 'payrolls'));
+  const { data: departments } = useCollection<Department>(collection(firestore, 'departments'));
+  const { data: advances } = useCollection<Advance>(collection(firestore, 'advances'));
   
   if (userLoading || profileLoading) {
-    return <div className="text-center">Loading dashboard...</div>;
+    return <div className="flex h-[50vh] items-center justify-center">Loading dashboard...</div>;
   }
 
-  // This is the fix. Explicitly check for the profile and role before using them.
   if (!userProfile || !userProfile.role) {
       return (
         <div className="w-full">
           <h1 className="text-3xl font-bold font-headline mb-6">Dashboard</h1>
-          <div>Loading user role... If this persists, you may not have a role assigned.</div>
+          <Card className="p-10 text-center text-muted-foreground">
+              User role not found. Please contact an administrator.
+          </Card>
         </div>
       );
   }
@@ -255,19 +290,24 @@ export default function DashboardPage() {
   const renderDashboard = () => {
     switch(USER_ROLE) {
       case 'admin':
-        return <AdminDashboard />;
+        return <AdminDashboard 
+                  employees={employees} 
+                  payrolls={payrolls} 
+                  departments={departments} 
+                  advances={advances} 
+                />;
       case 'manager':
-        return <ManagerDashboard />;
+        return <ManagerDashboard employees={employees} />;
       case 'employee':
-        return <EmployeeDashboard />;
+        return <EmployeeDashboard payrolls={payrolls} me={userProfile} />;
       default:
-        return <div>An unexpected error occurred with the user role.</div>;
+        return <div className="p-10 text-center">Unauthorized access level.</div>;
     }
   }
 
   return (
-    <div className="w-full">
-      <h1 className="text-3xl font-bold font-headline mb-6">Dashboard</h1>
+    <div className="w-full max-w-7xl mx-auto">
+      <h1 className="text-3xl font-bold font-headline mb-8">Dashboard Overview</h1>
       {renderDashboard()}
     </div>
   );
