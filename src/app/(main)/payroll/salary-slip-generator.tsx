@@ -22,7 +22,7 @@ import { SalarySlipDisplay } from '@/components/salary-slip';
 import { useFirestore, useDoc, useCollection } from '@/firebase';
 import { doc, query, collection, where } from 'firebase/firestore';
 import { addOrUpdateDoc } from '@/lib/firebase-utils';
-import jsPDF from 'jspdf';
+import jsPDF from 'jsPDF';
 import html2canvas from 'html2canvas';
 
 export function SalarySlipGenerator({ employee }: { employee: Employee }) {
@@ -37,12 +37,12 @@ export function SalarySlipGenerator({ employee }: { employee: Employee }) {
   const { data: department } = useDoc<Department>(doc(firestore, 'departments', employee.departmentId));
   const { data: team } = useDoc<Team>(employee.teamId ? doc(firestore, 'teams', employee.teamId) : null);
 
+  // Simplified query to avoid composite index requirements
   const advancesQuery = useMemo(() => {
     if (!firestore || !employee.id) return null;
     return query(
       collection(firestore, 'advances'), 
-      where('employeeId', '==', employee.id), 
-      where('remainingBalance', '>', 0)
+      where('employeeId', '==', employee.id)
     );
   }, [firestore, employee.id]);
   
@@ -50,15 +50,23 @@ export function SalarySlipGenerator({ employee }: { employee: Employee }) {
 
   useEffect(() => {
     if (advances && advances.length > 0) {
-        // Find the most recent unpaid advance
-        const advance = advances[0];
-        setActiveAdvance(advance);
+        // Filter in-memory to find active advances (remainingBalance > 0)
+        // This avoids the "Missing or insufficient permissions" or "Index required" errors for complex queries
+        const unpaidAdvances = advances.filter(a => a.remainingBalance > 0);
         
-        // Calculate the installment (total amount / number of months)
-        const monthlyInstallment = advance.amount / advance.installments;
-        // Deduction is either the installment or the remaining balance, whichever is smaller
-        const deduction = Math.min(advance.remainingBalance, monthlyInstallment);
-        setAdvanceDeduction(Math.round(deduction * 100) / 100);
+        if (unpaidAdvances.length > 0) {
+            const advance = unpaidAdvances[0];
+            setActiveAdvance(advance);
+            
+            // Calculate the installment (total amount / number of months)
+            const monthlyInstallment = advance.amount / (advance.installments || 1);
+            // Deduction is either the installment or the remaining balance, whichever is smaller
+            const deduction = Math.min(advance.remainingBalance, monthlyInstallment);
+            setAdvanceDeduction(Math.round(deduction * 100) / 100);
+        } else {
+            setActiveAdvance(null);
+            setAdvanceDeduction(0);
+        }
     } else {
         setActiveAdvance(null);
         setAdvanceDeduction(0);
@@ -107,10 +115,13 @@ export function SalarySlipGenerator({ employee }: { employee: Employee }) {
     setSlip(null);
     setError(null);
     if (advances && advances.length > 0) {
-        const advance = advances[0];
-        const monthlyInstallment = advance.amount / advance.installments;
-        const deduction = Math.min(advance.remainingBalance, monthlyInstallment);
-        setAdvanceDeduction(Math.round(deduction * 100) / 100);
+        const unpaidAdvances = advances.filter(a => a.remainingBalance > 0);
+        if (unpaidAdvances.length > 0) {
+            const advance = unpaidAdvances[0];
+            const monthlyInstallment = advance.amount / (advance.installments || 1);
+            const deduction = Math.min(advance.remainingBalance, monthlyInstallment);
+            setAdvanceDeduction(Math.round(deduction * 100) / 100);
+        }
     } else {
         setAdvanceDeduction(0);
     }
