@@ -2,10 +2,7 @@
 
 import { z } from 'zod';
 import { generateSalarySlipWithExplanation } from '@/ai/flows/salary-slip-explanation';
-import { getDoc, doc } from 'firebase/firestore';
-import { getFirestore } from 'firebase/firestore';
 import type { SalarySlip, Employee, Department, Team } from '@/lib/types';
-import { initializeFirebase } from '@/firebase'; // Cannot be used in a server component
 
 const generateSlipSchema = z.object({
   employeeId: z.string(),
@@ -14,27 +11,19 @@ const generateSlipSchema = z.object({
 
 type GenerateSlipInput = z.infer<typeof generateSlipSchema>;
 
-// This is a server action, but it needs a firestore instance.
-// In a real app, you would use the Firebase Admin SDK here.
-// For this environment, we'll have to be creative or acknowledge the limitation.
-// Let's assume for now we can get a firestore instance on the server.
-// A proper solution would be to initialize a separate admin app.
-// Since we can't do that, we will fetch data on the client and pass it here,
-// or we will have to call this from a client component that has access to firestore.
-
-// The current implementation calls this from a client component, but let's adjust it
-// to fetch the data within the action. This requires initializing firebase admin.
-// Since we can't, we'll adjust the component to pass the required data.
-
+/**
+ * Generates a salary slip with AI-powered explanations for adjustments.
+ * This action receives data from the client and calls the Genkit flow.
+ */
 export async function generateSalarySlipAction(
   input: GenerateSlipInput,
   employee: Employee,
-  department: Department | undefined,
-  team: Team | undefined
+  department: Department | null,
+  team: Team | null
 ): Promise<{ success: boolean; data?: SalarySlip; error?: string }> {
   const validation = generateSlipSchema.safeParse(input);
   if (!validation.success) {
-    return { success: false, error: 'Invalid input.' };
+    return { success: false, error: 'Invalid input parameters.' };
   }
 
   if (!employee) {
@@ -43,18 +32,21 @@ export async function generateSalarySlipAction(
 
   const { advanceDeduction } = validation.data;
 
-  const salaryMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+  // Use current date for the salary month
+  const now = new Date();
+  const salaryMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  
   const grossSalary = employee.monthlyBaseSalary;
   const netPayableSalary = grossSalary - advanceDeduction;
 
   try {
     const aiInput = {
       employeeDetails: {
-        employeeId: employee.id!,
+        employeeId: employee.id || 'N/A',
         fullName: employee.fullName,
         email: employee.email,
-        department: department?.name || 'N/A',
-        team: team?.name || 'N/A',
+        department: department?.name || 'General',
+        team: team?.name || 'General',
         dateOfJoining: employee.dateOfJoining,
       },
       salaryMonth,
@@ -62,21 +54,21 @@ export async function generateSalarySlipAction(
       advanceDeduction,
       netPayableSalary,
       companyName: 'Arogya Bio',
-      companyLogoUrl: '/logo.svg', // Placeholder, will be rendered as SVG
+      companyLogoUrl: 'https://arogyabio.com/logo.png', // Using a placeholder string for AI context
     };
 
     const result = await generateSalarySlipWithExplanation(aiInput);
 
     const slipData: SalarySlip = {
-        id: `slip-${Date.now()}`,
+        id: `slip-${employee.id}-${Date.now()}`,
         ...aiInput,
         explanation: result.salarySlipContent,
     };
     
     return { success: true, data: slipData };
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error generating salary slip:', error);
-    return { success: false, error: 'Failed to generate salary slip using AI.' };
+    return { success: false, error: error.message || 'Failed to generate salary slip using AI.' };
   }
 }
