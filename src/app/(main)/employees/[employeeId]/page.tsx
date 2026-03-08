@@ -21,11 +21,13 @@ import {
   Trash2,
   Download,
   HandCoins,
-  CheckCircle2
+  CheckCircle2,
+  Plus
 } from 'lucide-react';
 import { SalarySlipGenerator } from '../../payroll/salary-slip-generator';
 import { EmployeeForm } from '../employee-form';
-import { addOrUpdateDoc } from '@/lib/firebase-utils';
+import { DocumentForm, DocumentFormData } from '../document-form';
+import { addOrUpdateDoc, deleteDocument } from '@/lib/firebase-utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 export default function EmployeeDetailPage() {
@@ -37,7 +39,6 @@ export default function EmployeeDetailPage() {
     employeeId ? doc(firestore, 'employees', employeeId as string) : null
   );
 
-  // Performance Optimization: Fetch and sort Payrolls in-memory to bypass composite index requirements
   const payrollsQuery = useMemo(() => {
     if (!firestore || !employeeId) return null;
     return query(collection(firestore, 'payrolls'), where('employeeId', '==', employeeId));
@@ -50,7 +51,6 @@ export default function EmployeeDetailPage() {
     return [...payrollsRaw].sort((a, b) => b.month.localeCompare(a.month));
   }, [payrollsRaw]);
 
-  // Performance Optimization: Fetch and sort Advances in-memory
   const advancesQuery = useMemo(() => {
     if (!firestore || !employeeId) return null;
     return query(collection(firestore, 'advances'), where('employeeId', '==', employeeId));
@@ -70,6 +70,7 @@ export default function EmployeeDetailPage() {
   const { data: departments } = useCollection<Department>(collection(firestore, 'departments'));
 
   const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
+  const [isDocModalOpen, setIsDocModalOpen] = React.useState(false);
 
   if (employeeLoading) {
     return <div className="flex h-screen items-center justify-center">Loading employee profile...</div>;
@@ -88,6 +89,18 @@ export default function EmployeeDetailPage() {
     await addOrUpdateDoc(firestore, `employees/${employee.id}`, data);
   };
 
+  const handleSaveDocument = async (data: DocumentFormData) => {
+    if (employeeId) {
+      await addOrUpdateDoc(firestore, `employees/${employeeId}/documents`, data);
+    }
+  };
+
+  const handleDeleteDocument = async (docId: string) => {
+    if (employeeId) {
+      await deleteDocument(firestore, `employees/${employeeId}/documents/${docId}`);
+    }
+  };
+
   const handleMarkAsPaid = async (advanceId: string) => {
     const advanceRef = doc(firestore, 'advances', advanceId);
     await updateDoc(advanceRef, { remainingBalance: 0 });
@@ -104,7 +117,6 @@ export default function EmployeeDetailPage() {
         <h1 className="text-3xl font-bold font-headline text-primary">Employee Workspace</h1>
       </div>
 
-      {/* Hero Profile Card */}
       <Card className="overflow-hidden border-primary/20 shadow-lg">
         <CardContent className="p-0">
           <div className="bg-primary/5 p-8 flex flex-col md:flex-row items-center gap-8 border-b">
@@ -144,7 +156,6 @@ export default function EmployeeDetailPage() {
           <TabsTrigger value="documents"><FileText className="mr-2 h-4 w-4" /> Documents</TabsTrigger>
         </TabsList>
 
-        {/* DETAILS TAB */}
         <TabsContent value="details" className="space-y-6">
           <div className="grid gap-6 md:grid-cols-2">
             <Card className="shadow-sm">
@@ -196,7 +207,6 @@ export default function EmployeeDetailPage() {
           </div>
         </TabsContent>
 
-        {/* PAYROLL TAB */}
         <TabsContent value="payroll">
           <Card className="shadow-sm">
             <CardHeader>
@@ -234,7 +244,6 @@ export default function EmployeeDetailPage() {
           </Card>
         </TabsContent>
 
-        {/* ADVANCES TAB */}
         <TabsContent value="advances">
           <Card className="shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between">
@@ -298,7 +307,6 @@ export default function EmployeeDetailPage() {
           </Card>
         </TabsContent>
 
-        {/* DOCUMENTS TAB */}
         <TabsContent value="documents">
           <Card className="shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between">
@@ -306,7 +314,9 @@ export default function EmployeeDetailPage() {
                 <CardTitle className="font-headline">Compliance Documents</CardTitle>
                 <CardDescription>IDs, contracts, and legal paperwork for this profile.</CardDescription>
               </div>
-              <Button size="sm">Add Document</Button>
+              <Button size="sm" onClick={() => setIsDocModalOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" /> Add Document
+              </Button>
             </CardHeader>
             <CardContent>
               <Table>
@@ -331,8 +341,14 @@ export default function EmployeeDetailPage() {
                         <TableCell>{doc.uploadDate}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
-                            <Button variant="ghost" size="icon" className="hover:text-primary"><Download className="h-4 w-4" /></Button>
-                            <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10"><Trash2 className="h-4 w-4" /></Button>
+                            {doc.fileUrl && (
+                               <Button variant="ghost" size="icon" className="hover:text-primary" asChild>
+                                  <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer"><Download className="h-4 w-4" /></a>
+                               </Button>
+                            )}
+                            <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10" onClick={() => handleDeleteDocument(doc.id!)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -350,6 +366,12 @@ export default function EmployeeDetailPage() {
         onOpenChange={setIsEditModalOpen} 
         onSave={handleUpdateEmployee} 
         employee={employee} 
+      />
+
+      <DocumentForm
+        isOpen={isDocModalOpen}
+        onOpenChange={setIsDocModalOpen}
+        onSave={handleSaveDocument}
       />
     </div>
   );
