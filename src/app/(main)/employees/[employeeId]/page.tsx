@@ -6,7 +6,7 @@ import { useDoc, useFirestore, useCollection } from '@/firebase';
 import { doc, collection, query, where, updateDoc } from 'firebase/firestore';
 import type { Employee, Payroll, EmployeeDocument, Department, Advance } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
