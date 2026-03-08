@@ -53,9 +53,22 @@
         "dateOfJoining": { "type": "string", "format": "date" },
         "monthlyBaseSalary": { "type": "number" },
         "status": { "type": "string", "enum": ["Active", "Inactive"] },
-        "profilePhotoUrl": { "type": "string", "format": "uri" }
+        "profilePhotoUrl": { "type": "string", "format": "uri" },
+        "address": { "type": "string" },
+        "emergencyContact": { "type": "string" }
       },
       "required": ["fullName", "email", "role", "departmentId", "dateOfJoining", "monthlyBaseSalary", "status"]
+    },
+    "EmployeeDocument": {
+      "title": "Employee Document",
+      "description": "Metadata for files attached to an employee profile.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["Contract", "ID Proof", "Tax Form", "Other"] },
+        "uploadDate": { "type": "string", "format": "date" },
+        "fileUrl": { "type": "string" }
+      }
     },
     "Advance": {
         "title": "Salary Advance",
@@ -87,6 +100,10 @@
     "/employees/{employeeId}": {
       "schema": { "$ref": "#/entities/Employee" },
       "description": "Collection of all employees."
+    },
+    "/employees/{employeeId}/documents/{docId}": {
+      "schema": { "$ref": "#/entities/EmployeeDocument" },
+      "description": "Sub-collection for employee documents metadata."
     },
     "/advances/{advanceId}": {
         "schema": { "$ref": "#/entities/Advance" },

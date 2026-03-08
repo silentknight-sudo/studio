@@ -12,6 +12,16 @@ export type Employee = {
   monthlyBaseSalary: number;
   status: 'Active' | 'Inactive';
   profilePhotoUrl?: string;
+  address?: string;
+  emergencyContact?: string;
+};
+
+export type EmployeeDocument = {
+  id?: string;
+  name: string;
+  type: 'Contract' | 'ID Proof' | 'Tax Form' | 'Other';
+  uploadDate: string;
+  fileUrl?: string;
 };
 
 export type Department = {
@@ -37,10 +47,11 @@ export type Attendance = {
 export type Payroll = {
   id?: string;
   employeeId: string;
-  month: string; // e.g., "June 2024"
+  month: string; // e.g., "2024-06"
   grossSalary: number;
   advanceDeduction: number;
   netPayableSalary: number;
+  createdAt?: any;
 };
 
 export type Advance = {

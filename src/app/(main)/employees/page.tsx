@@ -3,7 +3,7 @@
 import React from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { PlusCircle, MoreHorizontal } from "lucide-react"
+import { PlusCircle, MoreHorizontal, ExternalLink } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -19,6 +19,7 @@ import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialo
 import { useFirestore, useCollection } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { addOrUpdateDoc, deleteDocument } from '@/lib/firebase-utils';
+import Link from 'next/link';
 
 
 export default function EmployeesPage() {
@@ -30,7 +31,6 @@ export default function EmployeesPage() {
     const [isFormOpen, setIsFormOpen] = React.useState(false);
 
     const handleSaveEmployee = async (data: EmployeeFormData) => {
-        // Sanitize data to remove undefined values, which Firestore doesn't support.
         const cleanData = JSON.parse(JSON.stringify(data));
 
         if (editingEmployee) {
@@ -80,7 +80,7 @@ export default function EmployeesPage() {
             <Card>
                 <CardHeader>
                     <CardTitle>Employee List</CardTitle>
-                    <CardDescription>A list of all employees in your company.</CardDescription>
+                    <CardDescription>Click on an employee to view details or manage their profile.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <Table>
@@ -95,15 +95,20 @@ export default function EmployeesPage() {
                         </TableHeader>
                         <TableBody>
                             {loadingEmployees || loadingDepartments ? (
-                                <TableRow><TableCell colSpan={5} className="text-center">Loading...</TableCell></TableRow>
+                                <TableRow><TableCell colSpan={5} className="text-center py-10">Loading employees...</TableCell></TableRow>
                             ) : (
                                 employees?.map(employee => (
-                                <TableRow key={employee.id}>
+                                <TableRow key={employee.id} className="group">
                                     <TableCell>
-                                        <div className="font-medium">{employee.fullName}</div>
-                                        <div className="hidden text-sm text-muted-foreground md:inline">
-                                            {employee.email}
-                                        </div>
+                                        <Link href={`/employees/${employee.id}`} className="hover:underline flex flex-col">
+                                            <span className="font-medium text-primary flex items-center gap-1">
+                                                {employee.fullName}
+                                                <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                            </span>
+                                            <span className="hidden text-xs text-muted-foreground md:inline">
+                                                {employee.email}
+                                            </span>
+                                        </Link>
                                     </TableCell>
                                     <TableCell className="hidden sm:table-cell">{employee.role}</TableCell>
                                     <TableCell className="hidden md:table-cell">{getDepartmentName(employee.departmentId)}</TableCell>
@@ -126,7 +131,10 @@ export default function EmployeesPage() {
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
                                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                <DropdownMenuItem onClick={() => handleEditClick(employee)}>Edit</DropdownMenuItem>
+                                                <DropdownMenuItem asChild>
+                                                    <Link href={`/employees/${employee.id}`}>View Details</Link>
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => handleEditClick(employee)}>Quick Edit</DropdownMenuItem>
                                                 <DeleteConfirmationDialog
                                                     onConfirm={() => handleDeleteEmployee(employee.id!)}
                                                     itemName={employee.fullName}
