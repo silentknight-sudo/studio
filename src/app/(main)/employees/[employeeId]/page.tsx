@@ -1,9 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useDoc, useFirestore, useCollection } from '@/firebase';
-import { doc, collection, query, where, orderBy } from 'firebase/firestore';
+import { doc, collection, query, where } from 'firebase/firestore';
 import type { Employee, Payroll, EmployeeDocument, Department } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -18,15 +18,13 @@ import {
   Mail, 
   Phone, 
   Calendar, 
-  Building2,
   Trash2,
   Download
 } from 'lucide-react';
 import { SalarySlipGenerator } from '../../payroll/salary-slip-generator';
 import { EmployeeForm } from '../employee-form';
-import { addOrUpdateDoc, deleteDocument } from '@/lib/firebase-utils';
+import { addOrUpdateDoc } from '@/lib/firebase-utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { format } from 'date-fns';
 
 export default function EmployeeDetailPage() {
   const { employeeId } = useParams();
@@ -37,9 +35,20 @@ export default function EmployeeDetailPage() {
     employeeId ? doc(firestore, 'employees', employeeId as string) : null
   );
 
-  const { data: payrolls, loading: payrollsLoading } = useCollection<Payroll>(
-    employeeId ? query(collection(firestore, 'payrolls'), where('employeeId', '==', employeeId), orderBy('month', 'desc')) : null
-  );
+  // ARCHITECTURAL FIX: Remove orderBy from Firestore query to avoid index requirements.
+  // We handle sorting in-memory below for better dev-experience and scalability.
+  const payrollsQuery = useMemo(() => {
+    if (!firestore || !employeeId) return null;
+    return query(collection(firestore, 'payrolls'), where('employeeId', '==', employeeId));
+  }, [firestore, employeeId]);
+
+  const { data: payrollsRaw, loading: payrollsLoading } = useCollection<Payroll>(payrollsQuery);
+
+  // Client-side sort to replace the database-level orderBy
+  const payrolls = useMemo(() => {
+    if (!payrollsRaw) return null;
+    return [...payrollsRaw].sort((a, b) => b.month.localeCompare(a.month));
+  }, [payrollsRaw]);
 
   const { data: documents, loading: docsLoading } = useCollection<EmployeeDocument>(
     employeeId ? collection(firestore, 'employees', employeeId as string, 'documents') : null
@@ -182,10 +191,10 @@ export default function EmployeeDetailPage() {
                 <TableBody>
                   {payrollsLoading ? (
                     <TableRow><TableCell colSpan={4} className="text-center">Loading payrolls...</TableCell></TableRow>
-                  ) : payrolls?.length === 0 ? (
+                  ) : !payrolls || payrolls.length === 0 ? (
                     <TableRow><TableCell colSpan={4} className="text-center py-10 text-muted-foreground">No payroll history found.</TableCell></TableRow>
                   ) : (
-                    payrolls?.map(p => (
+                    payrolls.map(p => (
                       <TableRow key={p.id}>
                         <TableCell className="font-medium">{p.month}</TableCell>
                         <TableCell>{p.grossSalary.toLocaleString('en-IN')} INR</TableCell>
@@ -223,10 +232,10 @@ export default function EmployeeDetailPage() {
                 <TableBody>
                   {docsLoading ? (
                     <TableRow><TableCell colSpan={4} className="text-center">Loading documents...</TableCell></TableRow>
-                  ) : documents?.length === 0 ? (
+                  ) : !documents || documents.length === 0 ? (
                     <TableRow><TableCell colSpan={4} className="text-center py-10 text-muted-foreground">No documents attached to this profile.</TableCell></TableRow>
                   ) : (
-                    documents?.map(doc => (
+                    documents.map(doc => (
                       <TableRow key={doc.id}>
                         <TableCell className="font-medium">{doc.name}</TableCell>
                         <TableCell><Badge variant="outline">{doc.type}</Badge></TableCell>
