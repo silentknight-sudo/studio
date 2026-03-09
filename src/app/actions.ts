@@ -18,7 +18,7 @@ export type ActionResponse<T> = {
 };
 
 /**
- * Orchestrates the AI salary slip generation with robust error boundaries.
+ * Orchestrates AI salary slip generation with enhanced hosting error diagnostics.
  */
 export async function generateSalarySlipAction(
   input: GenerateSlipInput,
@@ -39,12 +39,12 @@ export async function generateSalarySlipAction(
       return { success: false, error: 'Valid employee data is required for generation.' };
     }
 
-    const { advanceDeduction } = validation.data;
+    // Standardize dates for the slip
     const now = new Date();
     const salaryMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     
     const grossSalary = employee.monthlyBaseSalary;
-    const netPayableSalary = grossSalary - advanceDeduction;
+    const netPayableSalary = grossSalary - validation.data.advanceDeduction;
 
     // AI Context Preparation
     const aiInput = {
@@ -58,7 +58,7 @@ export async function generateSalarySlipAction(
       },
       salaryMonth,
       grossSalary,
-      advanceDeduction,
+      advanceDeduction: validation.data.advanceDeduction,
       netPayableSalary,
       companyName: 'Arogya Bio',
       companyLogoUrl: 'https://arogyabio.com/logo.png', 
@@ -68,7 +68,7 @@ export async function generateSalarySlipAction(
     const aiResult = await generateSalarySlipWithExplanation(aiInput);
 
     if (!aiResult || !aiResult.salarySlipContent) {
-      throw new Error('AI failed to produce a valid explanation for the slip.');
+      throw new Error('AI Engine returned an empty response.');
     }
 
     const slipData: SalarySlip = {
@@ -80,16 +80,19 @@ export async function generateSalarySlipAction(
     return { success: true, data: slipData };
 
   } catch (error: any) {
-    // Handle the specific GenAI API key failure gracefully
-    if (error.message?.includes('API key') || error.message?.includes('FAILED_PRECONDITION')) {
+    console.error('Production AI Generation Error:', error);
+    
+    // Explicit Hosting Configuration Feedback
+    if (error.message?.includes('API key') || error.message?.includes('credential') || error.message?.includes('403')) {
         return { 
             success: false, 
-            error: 'AI service is currently unconfigured. Please ensure the GOOGLE_GENAI_API_KEY is set in the environment.' 
+            error: 'AI CONFIGURATION ERROR: The GEMINI_API_KEY is missing or invalid in your hosting environment. Please check your secrets/environment variables.' 
         };
     }
     
-    const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred during AI generation.';
-    console.error('Production Error [generateSalarySlipAction]:', errorMessage);
-    return { success: false, error: errorMessage };
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'A system error occurred while generating the payslip.' 
+    };
   }
 }

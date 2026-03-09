@@ -22,8 +22,6 @@ import { SalarySlipDisplay } from '@/components/salary-slip';
 import { useFirestore, useDoc, useCollection } from '@/firebase';
 import { doc, query, collection, where } from 'firebase/firestore';
 import { addOrUpdateDoc } from '@/lib/firebase-utils';
-import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas';
 
 export function SalarySlipGenerator({ employee }: { employee: Employee }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -72,7 +70,7 @@ export function SalarySlipGenerator({ employee }: { employee: Employee }) {
         if (result.success && result.data) {
           setSlip(result.data);
 
-          // Atomic Database Operations
+          // Atomic persistence of payroll record
           await addOrUpdateDoc<Omit<Payroll, 'id'>>(firestore, 'payrolls', {
               employeeId: employee.id!,
               month: result.data.salaryMonth,
@@ -81,6 +79,7 @@ export function SalarySlipGenerator({ employee }: { employee: Employee }) {
               netPayableSalary: result.data.netPayableSalary,
           });
 
+          // Balance reduction for advances
           if (activeAdvance && advanceDeduction > 0) {
               const newRemainingBalance = Math.max(0, activeAdvance.remainingBalance - advanceDeduction);
               await addOrUpdateDoc<Partial<Advance>>(firestore, `advances/${activeAdvance.id}`, {
@@ -101,12 +100,22 @@ export function SalarySlipGenerator({ employee }: { employee: Employee }) {
     setError(null);
   };
 
+  /**
+   * PDF Generation with Hosting Optimization
+   * Uses dynamic imports to prevent SSR issues and reduce initial bundle size.
+   */
   const handleDownloadPdf = async () => {
     const slipElement = document.getElementById('salary-slip-printable');
     if (!slipElement) return;
 
     try {
-      const canvas = await html2canvas(slipElement, { 
+      // Dynamic imports for heavy PDF libraries
+      const [html2canvas, { jsPDF }] = await Promise.all([
+        import('html2canvas'),
+        import('jspdf')
+      ]);
+
+      const canvas = await html2canvas.default(slipElement, { 
         scale: 2,
         useCORS: true,
         logging: false,
@@ -121,6 +130,7 @@ export function SalarySlipGenerator({ employee }: { employee: Employee }) {
       pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
       pdf.save(`Payslip_${employee.fullName.replace(/\s+/g, '_')}_${slip?.salaryMonth}.pdf`);
     } catch (err) {
+      console.error('PDF Render Error:', err);
       setError('Failed to render PDF. Please try printing instead.');
     }
   };
@@ -132,8 +142,8 @@ export function SalarySlipGenerator({ employee }: { employee: Employee }) {
       </DialogTrigger>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <DialogTitle className="font-headline text-xl">Payroll Processing Engine</DialogTitle>
-          <DialogDescription>Generates an AI-verified audit-ready salary slip.</DialogDescription>
+          <DialogTitle className="font-headline text-xl text-primary">Arogya Payroll Engine</DialogTitle>
+          <DialogDescription>Generates an audit-ready salary slip with AI verification.</DialogDescription>
         </DialogHeader>
         
         <div className="flex-1 overflow-hidden">
@@ -147,22 +157,22 @@ export function SalarySlipGenerator({ employee }: { employee: Employee }) {
                 <Alert className="bg-primary/5 border-primary/20">
                   <AlertTitle className="text-primary font-bold">Active Advance Policy Applied</AlertTitle>
                   <AlertDescription>
-                    Balance: {activeAdvance.remainingBalance.toLocaleString('en-IN')} INR. 
-                    Standard installment: {advanceDeduction.toLocaleString('en-IN')} INR.
+                    Outstanding: {activeAdvance.remainingBalance.toLocaleString('en-IN')} INR. 
+                    Calculated installment: {advanceDeduction.toLocaleString('en-IN')} INR.
                   </AlertDescription>
                 </Alert>
               )}
               
               <div className="space-y-4">
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label className="text-right">Monthly Base</Label>
-                  <div className="col-span-3 font-mono bg-muted p-2 rounded text-sm">
+                  <Label className="text-right">Base Salary</Label>
+                  <div className="col-span-3 font-mono bg-muted p-2 rounded text-sm font-bold">
                     {employee.monthlyBaseSalary.toLocaleString('en-IN')} INR
                   </div>
                 </div>
                 
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="advance-deduction" className="text-right font-semibold">Repayment</Label>
+                  <Label htmlFor="advance-deduction" className="text-right font-semibold">Deduction</Label>
                   <div className="col-span-3">
                     <Input
                       id="advance-deduction"
@@ -171,11 +181,12 @@ export function SalarySlipGenerator({ employee }: { employee: Employee }) {
                       onChange={(e) => setAdvanceDeduction(parseFloat(e.target.value) || 0)}
                       className="border-primary/30"
                     />
+                    <p className="text-[10px] text-muted-foreground mt-1">Adjust if manual override is required.</p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-4 items-center gap-4 pt-4 border-t">
-                  <Label className="text-right font-bold text-primary">Final Net</Label>
+                  <Label className="text-right font-bold text-primary">Net Payable</Label>
                   <div className="col-span-3 text-2xl font-bold text-primary">
                     {(employee.monthlyBaseSalary - advanceDeduction).toLocaleString('en-IN')} INR
                   </div>
@@ -187,7 +198,7 @@ export function SalarySlipGenerator({ employee }: { employee: Employee }) {
           {error && (
             <Alert variant="destructive" className="mt-4 animate-in fade-in slide-in-from-top-1">
               <AlertTitle>Operation Failed</AlertTitle>
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription className="text-xs">{error}</AlertDescription>
             </Alert>
           )}
         </div>
@@ -204,7 +215,7 @@ export function SalarySlipGenerator({ employee }: { employee: Employee }) {
           ) : (
             <Button onClick={handleGenerate} disabled={isPending || loadingAdvances} className="w-full">
                 {(isPending || loadingAdvances) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isPending ? 'Verifying with AI...' : 'Generate & Persist Payroll'}
+                {isPending ? 'Processing AI Logic...' : 'Generate & Persist Payroll'}
             </Button>
           )}
         </DialogFooter>

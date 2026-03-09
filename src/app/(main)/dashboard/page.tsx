@@ -37,7 +37,7 @@ const AdminDashboard = ({
   const totalPayrollAllTime = payrolls?.reduce((sum, p) => sum + p.netPayableSalary, 0) || 0;
   const outstandingAdvances = advances?.reduce((sum, a) => sum + a.remainingBalance, 0) || 0;
 
-  // Monthly Payroll Trend (Last 6 months simulated from data)
+  // Monthly Payroll Trend (Last 6 months)
   const monthlyStats = useMemo(() => {
     if (!payrolls) return [];
     const stats: Record<string, number> = {};
@@ -63,13 +63,13 @@ const AdminDashboard = ({
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card className="bg-primary text-primary-foreground">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium opacity-80">Total Workforce</CardTitle>
+            <CardTitle className="text-sm font-medium opacity-80">Workforce</CardTitle>
             <Users className="h-4 w-4 opacity-70" />
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{totalEmployees}</div>
             <p className="text-xs opacity-70 flex items-center mt-1">
-                <Activity className="h-3 w-3 mr-1" /> {activeEmployees} Active currently
+                <Activity className="h-3 w-3 mr-1" /> {activeEmployees} Active Employees
             </p>
           </CardContent>
         </Card>
@@ -80,7 +80,7 @@ const AdminDashboard = ({
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{(monthlyStats[monthlyStats.length-1]?.total || 0).toLocaleString('en-IN')} INR</div>
-            <p className="text-xs text-muted-foreground">Current month payroll</p>
+            <p className="text-xs text-muted-foreground">Recent disbursement</p>
           </CardContent>
         </Card>
         <Card>
@@ -90,17 +90,17 @@ const AdminDashboard = ({
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{outstandingAdvances.toLocaleString('en-IN')} INR</div>
-            <p className="text-xs text-muted-foreground">Awaiting recovery</p>
+            <p className="text-xs text-muted-foreground">Total awaiting recovery</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Disbursements</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Disbursement</CardTitle>
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalPayrollAllTime.toLocaleString('en-IN')} INR</div>
-            <p className="text-xs text-muted-foreground">System total life-time</p>
+            <p className="text-xs text-muted-foreground">Lifetime payroll value</p>
           </CardContent>
         </Card>
       </div>
@@ -110,7 +110,7 @@ const AdminDashboard = ({
         <Card className="lg:col-span-4 shadow-sm border-none bg-muted/30">
           <CardHeader>
             <CardTitle className='font-headline text-xl'>Payroll Trend</CardTitle>
-            <CardDescription>Salary disbursement across the last 6 months.</CardDescription>
+            <CardDescription>Salary outflow history (Last 6 months).</CardDescription>
           </CardHeader>
           <CardContent>
             <ChartContainer config={{ total: { label: "Disbursed", color: "hsl(var(--primary))" } }} className="h-[280px] w-full">
@@ -148,7 +148,7 @@ const AdminDashboard = ({
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
                 <CardTitle className='font-headline'>Recent Payroll Activity</CardTitle>
-                <CardDescription>Latest processed salary slips and audit events.</CardDescription>
+                <CardDescription>Latest processed salary slips.</CardDescription>
             </div>
             <Button variant="outline" size="sm" asChild>
                 <Link href="/payroll">View All <ArrowRight className="ml-2 h-3 w-3"/></Link>
@@ -178,11 +178,6 @@ const AdminDashboard = ({
                     </TableRow>
                   );
                 })}
-                {(!payrolls || payrolls.length === 0) && (
-                  <TableRow>
-                    <TableCell colSpan={3} className="text-center py-6 text-muted-foreground italic">No recent activity.</TableCell>
-                  </TableRow>
-                )}
               </TableBody>
             </Table>
           </CardContent>
@@ -192,7 +187,7 @@ const AdminDashboard = ({
             <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                     <CardTitle className='font-headline'>Latest Hires</CardTitle>
-                    <CardDescription>New additions to the Arogya workforce.</CardDescription>
+                    <CardDescription>New additions to the workforce.</CardDescription>
                 </div>
                 <Button variant="ghost" size="sm" asChild>
                     <Link href="/employees"><UserPlus className="h-4 w-4"/></Link>
@@ -277,7 +272,7 @@ const EmployeeDashboard = ({ payrolls, me }: { payrolls: Payroll[] | null, me: U
                     </div>
                     {myRecord && (
                         <Button className="w-full" asChild>
-                            <Link href={`/employees/${myRecord.id}`}>View Full Record</Link>
+                            <Link href={`/employees/${myRecord.id}`}>View My Profile</Link>
                         </Button>
                     )}
                 </CardContent>
@@ -285,7 +280,7 @@ const EmployeeDashboard = ({ payrolls, me }: { payrolls: Payroll[] | null, me: U
             <Card className="md:col-span-2 shadow-sm">
                 <CardHeader className="border-b">
                     <CardTitle className='font-headline'>My Earnings</CardTitle>
-                    <CardDescription>Quick summary of recent salary transfers.</CardDescription>
+                    <CardDescription>Recent salary disbursements.</CardDescription>
                 </CardHeader>
                 <CardContent className="p-0">
                     <Table>
@@ -306,13 +301,6 @@ const EmployeeDashboard = ({ payrolls, me }: { payrolls: Payroll[] | null, me: U
                                     </TableCell>
                                 </TableRow>
                             ))}
-                            {(!myPayrolls || myPayrolls.length === 0) && (
-                                <TableRow>
-                                    <TableCell colSpan={3} className="text-center py-20 text-muted-foreground">
-                                        No recent earnings found.
-                                    </TableCell>
-                                </TableRow>
-                            )}
                         </TableBody>
                     </Table>
                 </CardContent>

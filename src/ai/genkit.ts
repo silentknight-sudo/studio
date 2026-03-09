@@ -2,9 +2,10 @@ import {genkit} from 'genkit';
 import {googleAI} from '@genkit-ai/google-genai';
 
 /**
- * Genkit instance configured for Google AI.
+ * Genkit instance configured for Production Google AI.
  * 
- * Note: GOOGLE_GENAI_API_KEY or GEMINI_API_KEY must be set in your environment.
+ * IMPORTANT: For production/hosting, ensure GEMINI_API_KEY is set in your 
+ * environment variables (e.g., Firebase App Hosting Secrets).
  */
 export const ai = genkit({
   plugins: [googleAI()],
