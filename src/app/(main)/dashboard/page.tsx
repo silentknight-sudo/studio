@@ -217,7 +217,6 @@ const AdminDashboard = ({
   );
 };
 
-// ... ManagerDashboard and EmployeeDashboard remain similar but could be enhanced ...
 const ManagerDashboard = ({ employees }: { employees: Employee[] | null }) => {
     return (
         <Card>

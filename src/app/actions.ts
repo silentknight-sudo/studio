@@ -18,8 +18,7 @@ export type ActionResponse<T> = {
 };
 
 /**
- * Orchestrates the AI salary slip generation.
- * Follows a functional pattern to ensure data consistency before returning to the client.
+ * Orchestrates the AI salary slip generation with robust error boundaries.
  */
 export async function generateSalarySlipAction(
   input: GenerateSlipInput,
@@ -80,7 +79,15 @@ export async function generateSalarySlipAction(
     
     return { success: true, data: slipData };
 
-  } catch (error: unknown) {
+  } catch (error: any) {
+    // Handle the specific GenAI API key failure gracefully
+    if (error.message?.includes('API key') || error.message?.includes('FAILED_PRECONDITION')) {
+        return { 
+            success: false, 
+            error: 'AI service is currently unconfigured. Please ensure the GOOGLE_GENAI_API_KEY is set in the environment.' 
+        };
+    }
+    
     const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred during AI generation.';
     console.error('Production Error [generateSalarySlipAction]:', errorMessage);
     return { success: false, error: errorMessage };
